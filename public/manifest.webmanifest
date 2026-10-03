@@ -1,7 +1,7 @@
 {
   "name": "Shelf",
   "short_name": "Shelf",
-  "description": "Save Instagram posts and Reels to your Mac.",
+  "description": "Download the Shelf app. The script does not download videos.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

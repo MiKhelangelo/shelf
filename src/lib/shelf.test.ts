@@ -1,11 +1,8 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { chmodSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 import test from "node:test";
 import { capIncoming, extractInstagramUrls, mergeLinks, parseInstagramUrl, reelsForKeyword } from "./instagram.ts";
-import { generateScript } from "./script.ts";
+import { APP_ARCHIVE_URL, APP_SCRIPT, generateScript } from "./script.ts";
 import { seedItems, SEED_URLS } from "./seed.ts";
 import { defaultSettings, type Settings } from "./settings.ts";
 import { parsePersisted } from "./storage.ts";
@@ -61,92 +58,76 @@ test("pulls links out of the original shell command", () => {
   assert.equal(extracted.rejected, 0);
 });
 
-test("default script is bash-valid and keeps every seed link", () => {
-  const items = seedItems();
-  const result = generateScript(items, defaultSettings);
+test("the saved file downloads the app and never downloads videos", () => {
+  const result = generateScript(seedItems(), defaultSettings);
   assert.equal(result.ok, true);
   if (!result.ok) return;
-  assert.equal(result.urlCount, 34);
-  for (const item of items) {
-    const occurrences: number = result.script.split(item.url).length - 1;
-    assert.equal(occurrences, 1, item.url);
-  }
-  assert.match(result.script, /--cookies-from-browser safari/);
-  assert.match(result.script, /--no-mtime/);
-  assert.doesNotMatch(result.script, /--no-cookies/);
-  assert.doesNotMatch(result.script, /uploader/);
-  assert.match(result.script, /--download-archive/);
-  assert.match(result.script, /--no-overwrites/);
-  assert.match(result.script, /limit=3/);
-  assert.match(result.script, /-f 'best'/);
-  assert.match(result.script, /--ignore-config/);
-  assert.match(result.script, /--no-update/);
-  assert.match(result.script, /umask 077/);
-  assert.match(result.script, /Refusing an unexpected link/);
-  assert.doesNotMatch(result.script, /--exec/);
-  assert.match(result.script, /--yes-playlist/);
-  assert.match(result.script, /for url in "\$\{urls\[@\]\}"/);
-  assert.doesNotMatch(result.script, /`/);
-  assert.equal(bashOk(result.script), true);
-});
-
-test("batch mode is one invocation and can omit cookies", () => {
-  const settings: Settings = { ...defaultSettings, mode: "batch", cookies: "none", pauseSeconds: 0 };
-  const result = generateScript(seedItems(), settings);
-  assert.equal(result.ok, true);
-  if (!result.ok) return;
-  assert.match(result.script, /"\$\{urls\[@\]\}"/);
-  assert.doesNotMatch(result.script, /"\$bin" "\$\{args\[@\]\}" -- "\$url"/);
+  assert.equal(result.urlCount, 0);
+  assert.equal(result.script, APP_SCRIPT);
+  assert.match(result.script, /Downloading the Shelf app/);
+  assert.match(result.script, /No videos were downloaded/);
+  assert.match(result.script, new RegExp(APP_ARCHIVE_URL.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+  assert.match(result.script, /Downloads\/shelf/);
+  assert.doesNotMatch(result.script, /yt-dlp/);
+  assert.doesNotMatch(result.script, /instagram\.com/);
   assert.doesNotMatch(result.script, /cookies-from-browser/);
-  assert.match(result.script, /--no-cookies/);
-  assert.doesNotMatch(result.script, /sleep-interval/);
+  assert.doesNotMatch(result.script, /Dd3tsoHmHuH/);
   assert.equal(bashOk(result.script), true);
 });
 
-test("unselected links and unsafe paths never reach the script", () => {
+test("selected links and downloader settings never reach the file", () => {
   const items = seedItems().map((item, index) => ({ ...item, selected: index === 0 }));
-  const picked = generateScript(items, defaultSettings);
-  assert.equal(picked.ok, true);
-  if (!picked.ok) return;
-  assert.equal(picked.urlCount, 1);
-  assert.equal(picked.script.includes(SEED_URLS[1]), false);
-
-  const injected = generateScript(
-    [{ ...items[0]!, url: "https://www.instagram.com/reel/AAAAAAAAAAA/; rm -rf /" }],
-    defaultSettings,
-  );
-  assert.equal(injected.ok, false);
-
-  const badPath = generateScript(items, { ...defaultSettings, binary: "$HOME/Downloads/yt-dlp;reboot" });
-  assert.equal(badPath.ok, false);
-
-  const home = generateScript(items, defaultSettings);
-  assert.equal(home.ok, true);
-  if (!home.ok) return;
-  assert.match(home.script, /bin="\$HOME\/Downloads\/yt-dlp_macos"/);
-  assert.equal(bashOk(home.script), true);
-});
-
-test("archive, mp4 format, and title names still parse", () => {
   const settings: Settings = {
     ...defaultSettings,
+    mode: "batch",
+    cookies: "none",
     format: "mp4",
     filename: "title-id",
-    useArchive: true,
-    forceOverwrite: false,
-    mode: "batch",
-    pauseSeconds: 2,
-    fullCarousel: false,
+    binary: "$HOME/Downloads/yt-dlp;reboot",
+    outputDir: "$HOME/Instagram-Reels;rm",
   };
-  const result = generateScript(seedItems().slice(0, 2), settings);
+  const result = generateScript(items, settings);
   assert.equal(result.ok, true);
   if (!result.ok) return;
-  assert.match(result.script, /--download-archive "\$archive"/);
-  assert.match(result.script, /--no-overwrites/);
-  assert.match(result.script, /--no-playlist/);
-  assert.match(result.script, /--sleep-interval 2/);
-  assert.match(result.script, /best\[ext=mp4\]\/best/);
+  assert.equal(result.script.includes(SEED_URLS[0]), false);
+  assert.equal(result.script.includes(SEED_URLS[1]), false);
+  assert.doesNotMatch(result.script, /yt-dlp/);
+  assert.doesNotMatch(result.script, /Instagram-Reels/);
+  assert.doesNotMatch(result.script, /reboot/);
   assert.equal(bashOk(result.script), true);
+});
+
+test("a keyword search still parses, but the file does not download those reels", () => {
+  const found = reelsForKeyword("Travel, travel! pasta");
+  assert.deepEqual(
+    found.map((item) => item.shortcode),
+    ["tag:travel", "tag:pasta"],
+  );
+  assert.deepEqual(
+    reelsForKeyword("a ../etc").map((item) => item.shortcode),
+    ["tag:etc"],
+  );
+  assert.equal(reelsForKeyword("..").length, 0);
+  assert.equal(parseInstagramUrl(found[0]!.url)?.url, found[0]!.url);
+
+  const result = generateScript(
+    found.map((item) => ({ ...item, selected: true })),
+    { ...defaultSettings, concurrency: 1, pauseSeconds: 0 },
+  );
+  assert.equal(result.ok, true);
+  if (!result.ok) return;
+  assert.doesNotMatch(result.script, /explore\/tags\/travel/);
+  assert.doesNotMatch(result.script, /--playlist-end/);
+  assert.doesNotMatch(result.script, /yt-dlp/);
+  assert.equal(bashOk(result.script), true);
+
+  const hostile = generateScript(
+    [{ ...found[0]!, url: "https://www.instagram.com/explore/tags/travel/;rm/", selected: true }],
+    defaultSettings,
+  );
+  assert.equal(hostile.ok, true);
+  if (!hostile.ok) return;
+  assert.doesNotMatch(hostile.script, /instagram\.com/);
 });
 
 test("storage drops tampered links and illegal enums", () => {
@@ -187,122 +168,6 @@ test("a paste keeps the first 200 links and reports the rest", () => {
   const capped = capIncoming(extracted.links);
   assert.equal(capped.links.length, 200);
   assert.equal(capped.overflow, 10);
-});
-
-test("careful mode keeps going when one link fails", () => {
-  const home = mkdtempSync(join(tmpdir(), "shelf-home-"));
-  const bin = join(home, "yt-dlp_macos");
-  writeFileSync(
-    bin,
-    `#!/bin/sh
-last=""
-for last do :; done
-printf '%s\\n' "$last" >> "$HOME/urls.txt"
-case "$last" in
-  *Dd3tsoHmHuH*) exit 9 ;;
-esac
-exit 0
-`,
-  );
-  chmodSync(bin, 0o755);
-
-  const settings: Settings = {
-    ...defaultSettings,
-    binary: "$HOME/yt-dlp_macos",
-    outputDir: "$HOME/Instagram-Reels",
-    pauseSeconds: 0,
-    concurrency: 1,
-  };
-  const result = generateScript(seedItems().slice(0, 2), settings);
-  assert.equal(result.ok, true);
-  if (!result.ok) return;
-
-  const scriptPath = join(home, "shelf-instagram.sh");
-  writeFileSync(scriptPath, result.script);
-  const run = spawnSync("bash", [scriptPath], {
-    env: { ...process.env, HOME: home },
-    encoding: "utf8",
-  });
-  assert.equal(run.status, 1, run.stderr);
-  const urls = readFileSync(join(home, "urls.txt"), "utf8").trim().split("\n");
-  assert.deepEqual(urls, [SEED_URLS[0], SEED_URLS[1]]);
-  const failed = readFileSync(join(home, "Instagram-Reels", "shelf-failed.txt"), "utf8");
-  assert.match(failed, /Dd3tsoHmHuH/);
-  assert.doesNotMatch(failed, /Ddqg_NAmSJ1/);
-});
-
-test("concurrent downloads still record a failure", () => {
-  const home = mkdtempSync(join(tmpdir(), "shelf-home-"));
-  const bin = join(home, "yt-dlp_macos");
-  writeFileSync(
-    bin,
-    `#!/bin/sh
-last=""
-for last do :; done
-printf '%s\\n' "$last" >> "$HOME/urls.txt"
-case "$last" in
-  *Dd3tsoHmHuH*) exit 9 ;;
-esac
-exit 0
-`,
-  );
-  chmodSync(bin, 0o755);
-
-  const settings: Settings = {
-    ...defaultSettings,
-    binary: "$HOME/yt-dlp_macos",
-    outputDir: "$HOME/Instagram-Reels",
-    pauseSeconds: 0,
-    concurrency: 2,
-  };
-  const result = generateScript(seedItems().slice(0, 2), settings);
-  assert.equal(result.ok, true);
-  if (!result.ok) return;
-  assert.match(result.script, /limit=2/);
-
-  const scriptPath = join(home, "shelf-instagram.sh");
-  writeFileSync(scriptPath, result.script);
-  const run = spawnSync("bash", [scriptPath], {
-    env: { ...process.env, HOME: home },
-    encoding: "utf8",
-  });
-  assert.equal(run.status, 1, run.stderr);
-  const urls = readFileSync(join(home, "urls.txt"), "utf8").trim().split("\n").sort();
-  assert.deepEqual(urls, [SEED_URLS[0], SEED_URLS[1]].sort());
-  const failed = readFileSync(join(home, "Instagram-Reels", "shelf-failed.txt"), "utf8");
-  assert.match(failed, /Dd3tsoHmHuH/);
-  assert.doesNotMatch(failed, /Ddqg_NAmSJ1/);
-});
-
-test("a keyword becomes a tag search of at most 15 reels", () => {
-  const found = reelsForKeyword("Travel, travel! pasta");
-  assert.deepEqual(
-    found.map((item) => item.shortcode),
-    ["tag:travel", "tag:pasta"],
-  );
-  assert.deepEqual(
-    reelsForKeyword("a ../etc").map((item) => item.shortcode),
-    ["tag:etc"],
-  );
-  assert.equal(reelsForKeyword("..").length, 0);
-  assert.equal(parseInstagramUrl(found[0]!.url)?.url, found[0]!.url);
-
-  const result = generateScript(
-    found.map((item) => ({ ...item, selected: true })),
-    { ...defaultSettings, concurrency: 1, pauseSeconds: 0 },
-  );
-  assert.equal(result.ok, true);
-  if (!result.ok) return;
-  assert.match(result.script, /explore\/tags\/travel/);
-  assert.match(result.script, /--playlist-end 15/);
-  assert.match(result.script, /--yes-playlist/);
-  assert.equal(bashOk(result.script), true);
-
-  const hostile = generateScript(
-    [{ ...found[0]!, url: "https://www.instagram.com/explore/tags/travel/;rm/", selected: true }],
-    defaultSettings,
-  );
-  assert.equal(hostile.ok, false);
 });
 
 function bashOk(script: string): boolean {

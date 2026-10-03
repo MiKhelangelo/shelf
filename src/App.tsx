@@ -16,7 +16,6 @@ import {
 } from "./lib/instagram";
 import { generateScript } from "./lib/script";
 import {
-  BROWSER_LABEL,
   CONCURRENCY,
   defaultSettings,
   FORMAT_LABEL,
@@ -203,7 +202,7 @@ export function ShelfApp() {
     anchor.click();
     anchor.remove();
     window.setTimeout(() => URL.revokeObjectURL(url), 1500);
-    setNotice("Saved to Downloads. Open the file to download the videos.");
+    setNotice("Saved to Downloads. Run ./shelf-instagram.sh to download the app. It does not download videos.");
   }
 
   async function copyScript() {
@@ -268,10 +267,6 @@ export function ShelfApp() {
   }
 
   const session = sessionOf(settings.cookies);
-  const cookieLine =
-    settings.cookies === "none"
-      ? "No browser login. Private posts will not download."
-      : `Uses the ${BROWSER_LABEL[settings.cookies]} session on this Mac. The login stays in that browser.`;
 
   const summary =
     items.length === 0
@@ -299,7 +294,7 @@ export function ShelfApp() {
         <div>
           <h1 className="font-display text-4xl font-medium tracking-tight text-ink">Shelf</h1>
           <p className="mt-2 max-w-2xl text-base text-pretty text-ink">
-            Save Instagram posts and Reels to your Mac. Paste one link or up to 200. Duplicates are skipped, and the videos stay on this computer.
+            Download the Shelf app to your Mac. The file shelf-instagram.sh saves the app into Downloads/shelf. It does not download videos.
           </p>
         </div>
         <p className="text-sm text-muted tabular-nums">
@@ -442,9 +437,7 @@ export function ShelfApp() {
           {downloadButton}
         </div>
         <p className="text-sm text-pretty text-muted">
-          {result.ok
-            ? `Saved as shelf-instagram.sh in Downloads. Open Terminal and follow the numbered steps at the top of that file. ${settings.cookies === "none" ? "No browser login." : `Uses ${BROWSER_LABEL[settings.cookies]} on this Mac.`}`
-            : "Add a link before saving the file."}
+          Saved as shelf-instagram.sh. In Terminal, type cd ~/Downloads, then chmod +x shelf-instagram.sh, then ./shelf-instagram.sh. That downloads the app into Downloads/shelf. It does not download videos.
         </p>
       </section>
 
@@ -550,7 +543,7 @@ export function ShelfApp() {
           <div className="mb-3">
             <h2 className="font-display text-xl font-medium">Download file</h2>
             <p className="text-sm text-pretty text-well-muted">
-              {result.ok ? cookieLine : "Add a link to prepare the file."}
+              This file downloads the Shelf app. It does not download videos.
             </p>
             {digest ? (
               <p className="mt-1 font-mono text-xs text-well-muted" title={digest}>
@@ -559,7 +552,7 @@ export function ShelfApp() {
             ) : null}
           </div>
           <pre className="script-scroll min-w-0 font-mono text-sm leading-relaxed">
-            {result.ok ? result.script : items.length === 0 ? "The file appears here after you add a link." : result.error}
+            {result.ok ? result.script : "The file appears here after the page loads."}
           </pre>
           <div className="mt-4">
             <button type="button" className={secondaryButton} onClick={() => void copyScript()} disabled={!result.ok}>
