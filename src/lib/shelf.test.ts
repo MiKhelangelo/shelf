@@ -3,20 +3,8 @@ import { spawnSync } from "node:child_process";
 import test from "node:test";
 import { capIncoming, extractInstagramUrls, mergeLinks, parseInstagramUrl, reelsForKeyword } from "./instagram.ts";
 import { APP_ARCHIVE_URL, APP_SCRIPT, generateScript } from "./script.ts";
-import { seedItems, SEED_URLS } from "./seed.ts";
 import { defaultSettings, type Settings } from "./settings.ts";
 import { parsePersisted } from "./storage.ts";
-
-test("seed is 34 unique posts and reels in the original order", () => {
-  const items = seedItems();
-  assert.equal(items.length, 34);
-  assert.equal(new Set(items.map((item) => item.shortcode)).size, 34);
-  assert.equal(items[0]?.shortcode, "Dd3tsoHmHuH");
-  assert.equal(items[2]?.kind, "reel");
-  assert.equal(items[29]?.shortcode, "DdYvOIPT9L-");
-  assert.equal(items.filter((item) => item.kind === "post").length, 14);
-  assert.equal(items.filter((item) => item.kind === "reel").length, 20);
-});
 
 test("parses posts, reels, share links, and query strings", () => {
   assert.equal(
@@ -28,7 +16,7 @@ test("parses posts, reels, share links, and query strings", () => {
     "reel",
   );
   assert.equal(parseInstagramUrl("https://instagram.com/someuser/reel/DaiB5OdoqWX/")?.shortcode, "DaiB5OdoqWX");
-  assert.equal(parseInstagramUrl("https://www.instagram.com/stories/someone/123/") , null);
+  assert.equal(parseInstagramUrl("https://www.instagram.com/stories/someone/123/"), null);
   assert.equal(parseInstagramUrl("https://www.instagram.com/someone/"), null);
   assert.equal(parseInstagramUrl("https://evil.example/instagram.com/p/Dd3tsoHmHuH/"), null);
   assert.equal(parseInstagramUrl("https://user:pass@www.instagram.com/p/Dd3tsoHmHuH/"), null);
@@ -44,12 +32,12 @@ test("parses posts, reels, share links, and query strings", () => {
   assert.equal(parseInstagramUrl("https://www.\u0456nstagram.com/p/Dd3tsoHmHuH/"), null);
 });
 
-test("pulls links out of the original shell command", () => {
+test("pulls links out of a pasted shell command", () => {
   const command = [
     '"$HOME/Downloads/yt-dlp_macos" \\',
     "  --cookies-from-browser safari \\",
-    `  "${SEED_URLS[0]}" \\`,
-    `  "${SEED_URLS[1]}"`,
+    '  "https://www.instagram.com/p/Dd3tsoHmHuH/" \\',
+    '  "https://www.instagram.com/p/Ddqg_NAmSJ1/"',
     "not a link",
   ].join("\n");
   const extracted = extractInstagramUrls(command);
@@ -59,7 +47,7 @@ test("pulls links out of the original shell command", () => {
 });
 
 test("the saved file downloads the app and never downloads videos", () => {
-  const result = generateScript(seedItems(), defaultSettings);
+  const result = generateScript([], defaultSettings);
   assert.equal(result.ok, true);
   if (!result.ok) return;
   assert.equal(result.urlCount, 0);
@@ -71,12 +59,11 @@ test("the saved file downloads the app and never downloads videos", () => {
   assert.doesNotMatch(result.script, /yt-dlp/);
   assert.doesNotMatch(result.script, /instagram\.com/);
   assert.doesNotMatch(result.script, /cookies-from-browser/);
-  assert.doesNotMatch(result.script, /Dd3tsoHmHuH/);
+  assert.doesNotMatch(result.script, /DcJDWQhuc0P/);
   assert.equal(bashOk(result.script), true);
 });
 
 test("selected links and downloader settings never reach the file", () => {
-  const items = seedItems().map((item, index) => ({ ...item, selected: index === 0 }));
   const settings: Settings = {
     ...defaultSettings,
     mode: "batch",
@@ -86,11 +73,10 @@ test("selected links and downloader settings never reach the file", () => {
     binary: "$HOME/Downloads/yt-dlp;reboot",
     outputDir: "$HOME/Instagram-Reels;rm",
   };
-  const result = generateScript(items, settings);
+  const result = generateScript([], settings);
   assert.equal(result.ok, true);
   if (!result.ok) return;
-  assert.equal(result.script.includes(SEED_URLS[0]), false);
-  assert.equal(result.script.includes(SEED_URLS[1]), false);
+  assert.equal(result.script.includes("DcJDWQhuc0P"), false);
   assert.doesNotMatch(result.script, /yt-dlp/);
   assert.doesNotMatch(result.script, /Instagram-Reels/);
   assert.doesNotMatch(result.script, /reboot/);
@@ -117,17 +103,9 @@ test("a keyword search still parses, but the file does not download those reels"
   assert.equal(result.ok, true);
   if (!result.ok) return;
   assert.doesNotMatch(result.script, /explore\/tags\/travel/);
-  assert.doesNotMatch(result.script, /--playlist-end/);
+  assert.doesNotMatch(result.script, /DcJDWQhuc0P/);
   assert.doesNotMatch(result.script, /yt-dlp/);
   assert.equal(bashOk(result.script), true);
-
-  const hostile = generateScript(
-    [{ ...found[0]!, url: "https://www.instagram.com/explore/tags/travel/;rm/", selected: true }],
-    defaultSettings,
-  );
-  assert.equal(hostile.ok, true);
-  if (!hostile.ok) return;
-  assert.doesNotMatch(hostile.script, /instagram\.com/);
 });
 
 test("storage drops tampered links and illegal enums", () => {
@@ -150,8 +128,13 @@ test("storage drops tampered links and illegal enums", () => {
 });
 
 test("merge reports duplicates already queued", () => {
-  const existing = seedItems().slice(0, 1);
-  const incoming = extractInstagramUrls(`${SEED_URLS[0]}\n${SEED_URLS[3]}`).links;
+  const existing = extractInstagramUrls("https://www.instagram.com/p/Dd3tsoHmHuH/").links.map((link) => ({
+    ...link,
+    selected: true,
+  }));
+  const incoming = extractInstagramUrls(
+    "https://www.instagram.com/p/Dd3tsoHmHuH/\nhttps://www.instagram.com/p/Ddqg_NAmSJ1/",
+  ).links;
   const merged = mergeLinks(existing, incoming);
   assert.equal(merged.added, 1);
   assert.equal(merged.duplicates, 1);

@@ -8,29 +8,34 @@ Live app: [mikhelangelo.github.io/shelf](https://mikhelangelo.github.io/shelf/).
 
 ## Run the file
 
-1. Open the live app and press **Save to Downloads**. You should get `shelf-instagram.sh`.
-2. Open **Terminal**. Press the Command key and the space bar, type `Terminal`, then press Return.
-3. Type the line below, then press Return. This opens the Downloads folder inside Terminal.
+The file already in Downloads is the old one. It still contains `www.instagram.com/reel/DcJDWQhuc0P` and will download that Reel. Replace it first.
+
+1. Open **Terminal**. Press the Command key and the space bar, type `Terminal`, then press Return.
+2. Paste this line and press Return. This replaces the old file. It does not download a Reel.
+
+```bash
+curl -fsSL -o ~/Downloads/shelf-instagram.sh https://raw.githubusercontent.com/MiKhelangelo/shelf/main/shelf-instagram.sh
+```
+
+3. Type this line and press Return.
 
 ```bash
 cd ~/Downloads
 ```
 
-4. Type the next line, then press Return. This lets the Mac run the file.
+4. Type this line and press Return.
 
 ```bash
 chmod +x shelf-instagram.sh
 ```
 
-5. Type the next line, then press Return. This downloads the app. It does not download videos.
+5. Type this line and press Return. This downloads the app only.
 
 ```bash
 ./shelf-instagram.sh
 ```
 
-6. Wait until Terminal says the app is in `Downloads/shelf`.
-
-An older `shelf-instagram.sh` already in Downloads can still download videos. Save a new file from the page, or run the copy in this repository, before using that command.
+6. Wait until Terminal says the app is in `Downloads/shelf` and that no videos were downloaded.
 
 If the Mac says it cannot open the file, go to **System Settings**, then **Privacy & Security**, and press **Open Anyway**.
 
