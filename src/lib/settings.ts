@@ -66,10 +66,10 @@ const PATH_RE = /^(?:\$HOME|~|\/)(?:\/[A-Za-z0-9._+-]+)+$/;
 
 export function pathError(path: string): string | null {
   const value = path.trim();
-  if (!value) return "Add a path.";
-  if (value.length > 240) return "That path is too long.";
+  if (!value) return "Add a folder.";
+  if (value.length > 240) return "That folder path is too long.";
   if (!PATH_RE.test(value)) {
-    return "Use a path like $HOME/Downloads/Instagram-Reels. Letters, numbers, dots, and dashes only — no spaces or quotes.";
+    return "Use a simple path, like $HOME/Downloads/Instagram-Reels. No spaces or quotes.";
   }
   return null;
 }
@@ -89,9 +89,9 @@ export const FORMAT_ARG: Record<FormatId, string> = {
 };
 
 export const FORMAT_LABEL: Record<FormatId, string> = {
-  best: "Best available",
-  mp4: "Best MP4",
-  merge: "Best video + audio, saved as MP4",
+  best: "Best picture",
+  mp4: "A video that plays anywhere",
+  merge: "Best picture and sound",
 };
 
 export const NAME_ARG: Record<NameStyle, string> = {
@@ -101,9 +101,9 @@ export const NAME_ARG: Record<NameStyle, string> = {
 };
 
 export const NAME_LABEL: Record<NameStyle, string> = {
-  "uploader-id": "account_shortcode.mp4",
-  id: "shortcode.mp4",
-  "title-id": "title [shortcode].mp4",
+  "uploader-id": "Name and code",
+  id: "Just the code",
+  "title-id": "Title and code",
 };
 
 export const BROWSER_LABEL: Record<CookieBrowser, string> = {
@@ -112,13 +112,13 @@ export const BROWSER_LABEL: Record<CookieBrowser, string> = {
   firefox: "Firefox",
   brave: "Brave",
   edge: "Edge",
-  none: "No cookies",
+  none: "No login",
 };
 
 export const SESSION_LABEL: Record<Session, string> = {
   safari: "Safari",
   firefox: "Firefox",
-  none: "Off",
+  none: "No login",
 };
 
 function isOneOf<T extends string>(value: unknown, options: readonly T[]): value is T {

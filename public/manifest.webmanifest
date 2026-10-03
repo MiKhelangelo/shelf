@@ -1,12 +1,12 @@
 {
   "name": "Shelf",
   "short_name": "Shelf",
-  "description": "Prepare a private script for Instagram posts and reels.",
+  "description": "Paste a link. Keep the video.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#141210",
-  "theme_color": "#141210",
+  "background_color": "#f3e9ff",
+  "theme_color": "#f3e9ff",
   "icons": [
     {
       "src": "favicon.svg",

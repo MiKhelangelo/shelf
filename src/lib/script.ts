@@ -34,21 +34,21 @@ function flag(name: string): string {
 export function generateScript(items: readonly Item[], settings: Settings): GenerateResult {
   const safe = sanitizeSettings(settings);
   const binaryError = pathError(safe.binary);
-  if (binaryError) return { ok: false, error: `yt-dlp: ${binaryError}` };
+  if (binaryError) return { ok: false, error: `Downloader: ${binaryError}` };
   const folderError = pathError(safe.outputDir);
   if (folderError) return { ok: false, error: `Folder: ${folderError}` };
 
   const selected = items.filter((item) => item.selected);
-  if (selected.length === 0) return { ok: false, error: "Select at least one link." };
+  if (selected.length === 0) return { ok: false, error: "Choose at least one link." };
   if (selected.length > MAX_LINKS) {
-    return { ok: false, error: `Keep a script to ${MAX_LINKS} links or fewer.` };
+    return { ok: false, error: `Keep it to ${MAX_LINKS} links or fewer.` };
   }
 
   const urls: string[] = [];
   for (const item of selected) {
     const parsed = parseInstagramUrl(item.url);
     if (!parsed || parsed.url !== item.url || !CANONICAL.test(item.url)) {
-      return { ok: false, error: "A link in the queue is not a valid Instagram post or reel." };
+      return { ok: false, error: "One of these links is not a post or Reel." };
     }
     urls.push(parsed.url);
   }
@@ -57,12 +57,12 @@ export function generateScript(items: readonly Item[], settings: Settings): Gene
   try {
     script = render(urls, safe);
   } catch {
-    return { ok: false, error: "Could not build a safe script from these settings." };
+    return { ok: false, error: "These settings could not make a safe file." };
   }
 
   const withoutArithmetic = script.replace(/\$\(\([a-z]+ \+ 1\)\)/g, "");
   if (withoutArithmetic.includes("`") || withoutArithmetic.includes("$(")) {
-    return { ok: false, error: "Could not build a safe script from these settings." };
+    return { ok: false, error: "These settings could not make a safe file." };
   }
 
   return { ok: true, script, urlCount: urls.length };
@@ -73,41 +73,41 @@ function render(urls: readonly string[], settings: Settings): string {
   const out = bashPath(settings.outputDir);
   const lines: string[] = [
     "#!/usr/bin/env bash",
-    "# Shelf — download Instagram posts and reels with yt-dlp.",
+    "# Shelf. Paste a link. Keep the video.",
     "# On your Mac: chmod +x shelf-instagram.sh && ./shelf-instagram.sh",
-    `# ${urls.length} ${urls.length === 1 ? "link" : "links"}. Nothing here is uploaded.`,
+    `# ${urls.length} ${urls.length === 1 ? "link" : "links"}. Nothing here is sent away.`,
   ];
 
   if (settings.cookies === "none") {
-    lines.push("# No browser cookies. Login-only posts will fail.");
+    lines.push("# No login. Private posts will not download.");
   } else if (settings.cookies === "firefox") {
-    lines.push("# Reads the Instagram session already logged in to Firefox. Cookies stay in Firefox.");
+    lines.push("# Uses the Instagram login already open in Firefox. It stays in Firefox.");
   } else if (settings.cookies === "safari") {
-    lines.push("# Reads the Instagram session already logged in to Safari. Cookies stay in Safari.");
+    lines.push("# Uses the Instagram login already open in Safari. It stays in Safari.");
   } else {
-    lines.push(`# Reads the Instagram session already logged in to ${settings.cookies}.`);
+    lines.push(`# Uses the Instagram login already open in ${settings.cookies}.`);
   }
 
   if (settings.mode === "batch") {
-    lines.push("# One yt-dlp run for the whole list.");
+    lines.push("# The whole list goes in one run.");
   } else if (settings.concurrency > 1) {
-    lines.push(`# ${settings.concurrency} downloads at once. A failure is written down and the rest continue.`);
+    lines.push(`# ${settings.concurrency} videos at a time. If one fails, the rest continue.`);
   } else {
-    lines.push("# One link at a time. A failure is written down and the rest continue.");
+    lines.push("# One video at a time. If one fails, the rest continue.");
   }
 
   if (settings.onDuplicate === "skip") {
-    lines.push("# Links already listed in .shelf-archive.txt are skipped.");
+    lines.push("# Videos you already saved are skipped.");
   } else {
-    lines.push("# Files already in the folder are downloaded again.");
+    lines.push("# Videos you already saved are downloaded again.");
   }
 
   if (settings.fullCarousel) {
-    lines.push("# Carousel posts save every slide, not only the first.");
+    lines.push("# A post with many photos saves every photo.");
   }
 
-  lines.push("# Written for the bash that ships with macOS (3.2).");
-  lines.push("# New files are private to your user. yt-dlp is not allowed to update itself.");
+  lines.push("# Made for the Mac.");
+  lines.push("# New files stay private. The downloader will not update itself.");
   lines.push("set -u");
   lines.push("set -o pipefail");
   lines.push("umask 077");

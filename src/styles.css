@@ -10,19 +10,20 @@
   --font-display: "Fraunces", "Iowan Old Style", Palatino, serif;
   --font-mono: ui-monospace, "Liberation Mono", "DejaVu Sans Mono", monospace;
 
-  --color-bg: #141210;
-  --color-bg-rise: #1c1916;
-  --color-surface: #221f1c;
-  --color-ink: #f4efe8;
-  --color-muted: #a8a099;
-  --color-line: #3c362f;
-  --color-accent: #f4efe8;
-  --color-accent-fg: #1c1916;
-  --color-chip: #2a2622;
-  --color-well: #0e0d0b;
-  --color-well-fg: #f4efe8;
-  --color-well-muted: #b7aea4;
-  --color-select: #3a332c;
+  --color-bg: #f3e9ff;
+  --color-bg-rise: #fff6c8;
+  --color-surface: #fffdf8;
+  --color-ink: #2d1b4e;
+  --color-muted: #6d5b8a;
+  --color-line: #e4d4f8;
+  --color-accent: #ffd23f;
+  --color-accent-fg: #2d1b4e;
+  --color-chip: #efe4ff;
+  --color-well: #fff6c2;
+  --color-well-fg: #2d1b4e;
+  --color-well-muted: #6d5b8a;
+  --color-select: #ffd23f;
+  --color-danger: #6b21a8;
 
   --radius-lg: 0.5rem;
   --radius-xl: 1.5rem;
@@ -33,7 +34,7 @@
 
 @layer base {
   html {
-    color-scheme: dark;
+    color-scheme: light;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
@@ -58,7 +59,7 @@
   }
 
   :focus-visible {
-    outline: 2px solid var(--color-accent);
+    outline: 2px solid var(--color-ink);
     outline-offset: 2px;
   }
 
