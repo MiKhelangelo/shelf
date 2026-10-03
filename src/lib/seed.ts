@@ -33,7 +33,7 @@ export const SEED_URLS = [
   "https://www.instagram.com/p/DdYrR6RjKMj/",
   "https://www.instagram.com/reel/DdYvOIPT9L-/",
   "https://www.instagram.com/reel/DaGPWTdB8HT/",
-  "https://www.instagram.com/reel/DcJDWQhuc0P/",
+  "https://www.instagram.com/reel/ShelfTestReel1/",
   "https://www.instagram.com/reel/DdHHTRbBOa_/",
   "https://www.instagram.com/reel/DdGu9qdBk_d/",
 ] as const;
