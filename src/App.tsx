@@ -32,7 +32,7 @@ import {
 import { readShelfState, writeShelfState } from "./lib/storage";
 
 const fieldClass =
-  "h-12 w-full rounded-lg border border-line bg-bg px-3 text-base text-ink placeholder:text-muted";
+  "h-12 w-full rounded-lg border border-line bg-field px-3 text-base text-ink placeholder:text-muted";
 const primaryButton =
   "inline-flex h-12 items-center justify-center gap-2 rounded-lg bg-accent px-4 text-sm font-semibold text-accent-fg transition-opacity duration-150 hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40";
 const secondaryButton =
@@ -50,11 +50,11 @@ function describeAdd(
   libraryFull: number,
 ): string {
   const bits: string[] = [];
-  if (added > 0) bits.push(`Added ${added}`);
-  if (duplicates > 0) bits.push(`${duplicates} ${duplicates === 1 ? "copy" : "copies"} skipped`);
-  if (rejected > 0) bits.push(rejected === 1 ? "1 was not a post or Reel" : `${rejected} were not posts or Reels`);
-  if (overflow > 0) bits.push(`${overflow} left out. Paste 200 at a time`);
-  if (libraryFull > 0) bits.push("This shelf is full");
+  if (added > 0) bits.push(added === 1 ? "Added 1 link" : `Added ${added} links`);
+  if (duplicates > 0) bits.push(duplicates === 1 ? "Skipped 1 duplicate" : `Skipped ${duplicates} duplicates`);
+  if (rejected > 0) bits.push(rejected === 1 ? "1 line was not a post or Reel" : `${rejected} lines were not posts or Reels`);
+  if (overflow > 0) bits.push(`${overflow} not added. The limit is 200 at a time`);
+  if (libraryFull > 0) bits.push("The library is full");
   if (bits.length === 0) return "Paste a link first.";
   return `${bits.join(". ")}.`;
 }
@@ -182,7 +182,7 @@ export function ShelfApp() {
     anchor.click();
     anchor.remove();
     window.setTimeout(() => URL.revokeObjectURL(url), 1500);
-    setNotice("Saved to Downloads. Open it, and the videos follow.");
+    setNotice("Saved to Downloads. Open the file to download the videos.");
   }
 
   async function copyScript() {
@@ -227,7 +227,7 @@ export function ShelfApp() {
     }
     setItems([]);
     setArmClear(false);
-    setNotice("Shelf cleared.");
+    setNotice("Library cleared.");
   }
 
   async function onFile(event: ChangeEvent<HTMLInputElement>) {
@@ -235,12 +235,12 @@ export function ShelfApp() {
     event.target.value = "";
     if (!file) return;
     if (file.size > 500_000) {
-      setNotice("That file is too big. Use a short text list.");
+      setNotice("That file is too large. Use a plain-text list.");
       return;
     }
     const text = await file.text();
     if (!isPlainTextList(text)) {
-      setNotice("That file isn’t a text list.");
+      setNotice("Use a plain-text list of links.");
       return;
     }
     ingest(text);
@@ -249,13 +249,13 @@ export function ShelfApp() {
   const session = sessionOf(settings.cookies);
   const cookieLine =
     settings.cookies === "none"
-      ? "No login, so private posts will not download."
-      : `Uses the ${BROWSER_LABEL[settings.cookies]} login already on your Mac. It never leaves that browser.`;
+      ? "No browser login. Private posts will not download."
+      : `Uses the ${BROWSER_LABEL[settings.cookies]} session on this Mac. The login stays in that browser.`;
 
   const summary =
     items.length === 0
-      ? "Your shelf is empty."
-      : `${counts.selected} of ${items.length} ready. Showing ${filtered.length}.`;
+      ? "No items yet."
+      : `${counts.selected} of ${items.length} selected. ${filtered.length} shown.`;
 
   const downloadButton = (
     <button type="button" className={`${primaryButton} w-full sm:w-auto`} onClick={saveToDownloads} disabled={!result.ok}>
@@ -276,8 +276,8 @@ export function ShelfApp() {
       <header className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="font-display text-4xl font-medium tracking-tight text-ink">Shelf</h1>
-          <p className="mt-2 max-w-2xl text-base text-pretty text-muted">
-            Paste a link. Keep the video. One post, or up to 200. Copies are skipped. The files stay on your Mac.
+          <p className="mt-2 max-w-2xl text-base text-pretty text-ink">
+            Save Instagram posts and Reels to your Mac. Paste one link or up to 200. Duplicates are skipped, and the videos stay on this computer.
           </p>
         </div>
         <p className="text-sm text-muted tabular-nums">
@@ -299,14 +299,14 @@ export function ShelfApp() {
             }}
             rows={6}
             spellCheck={false}
-            placeholder="One link, or a list. Up to 200."
-            className="h-36 w-full resize-y rounded-lg border border-line bg-bg px-3 py-2 text-base text-ink placeholder:text-muted"
+            placeholder="Paste Instagram links, one per line"
+            className="h-36 w-full resize-y rounded-lg border border-line bg-field px-3 py-2 text-base text-ink placeholder:text-muted"
           />
         </label>
 
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <fieldset>
-            <legend className="mb-1 text-sm font-medium text-ink">Signed in with</legend>
+            <legend className="mb-1 text-sm font-medium text-ink">Login</legend>
             <div className="grid grid-cols-3 gap-1 rounded-lg bg-chip p-1">
               {SESSIONS.map((value) => (
                 <button
@@ -327,7 +327,7 @@ export function ShelfApp() {
           </fieldset>
 
           <fieldset>
-            <legend className="mb-1 text-sm font-medium text-ink">Seen before</legend>
+            <legend className="mb-1 text-sm font-medium text-ink">Duplicates</legend>
             <div className="grid grid-cols-2 gap-1 rounded-lg bg-chip p-1">
               <button
                 type="button"
@@ -351,13 +351,13 @@ export function ShelfApp() {
                     : "h-11 rounded-md text-sm font-medium text-muted"
                 }
               >
-                Redownload
+                Download again
               </button>
             </div>
           </fieldset>
 
           <label className="block">
-            <span className="mb-1 block text-sm font-medium text-ink">How many</span>
+            <span className="mb-1 block text-sm font-medium text-ink">At a time</span>
             <select
               value={settings.concurrency}
               onChange={(event) => patch({ concurrency: Number(event.target.value) as Settings["concurrency"] })}
@@ -379,19 +379,19 @@ export function ShelfApp() {
               onChange={(event) => patch({ showThumbnails: event.target.checked })}
               className="size-4 accent-ink"
             />
-            Show pictures
+            Thumbnails
           </label>
         </div>
 
         <p className="text-sm text-pretty text-muted">
           {settings.onDuplicate === "skip"
-            ? "Videos you already saved are skipped."
-            : "Saved videos are downloaded again."}{" "}
+            ? "Items already saved are skipped."
+            : "Items already saved are downloaded again."}{" "}
           {settings.mode === "batch"
-            ? "The whole list goes in one run."
+            ? "The full list runs as one download."
             : settings.concurrency === 1
-              ? "One video at a time."
-              : `${settings.concurrency} videos at a time.`}
+              ? "Downloads run one at a time."
+              : `Downloads run ${settings.concurrency} at a time.`}
         </p>
 
         <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
@@ -420,20 +420,21 @@ export function ShelfApp() {
         </div>
         <p className="text-sm text-pretty text-muted">
           {result.ok
-            ? `A small file goes to Downloads. Open it, and the videos follow. ${settings.cookies === "none" ? "No login." : `${BROWSER_LABEL[settings.cookies]} only, on your Mac.`}`
-            : "Paste a link, then save it to Downloads."}
+            ? `The file is saved to Downloads. Open it to download the videos. ${settings.cookies === "none" ? "No browser login." : `Uses ${BROWSER_LABEL[settings.cookies]} on this Mac.`}`
+            : "Add a link before saving the file."}
         </p>
       </section>
 
       <section className="flex flex-col gap-3">
+        <h2 className="font-display text-2xl font-medium text-ink">Library</h2>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
           <label className="relative block min-w-0 flex-1">
-            <span className="sr-only">Search your shelf</span>
+            <span className="sr-only">Search the library</span>
             <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted" />
             <input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="Find a post or Reel"
+              placeholder="Search by code or link"
               className={`${fieldClass} pl-10`}
             />
           </label>
@@ -475,10 +476,10 @@ export function ShelfApp() {
 
         {items.length === 0 ? (
           <p className="panel px-5 py-12 text-sm text-pretty text-muted">
-            Nothing here yet. Paste a post or Reel above. Stories and profiles stay out.
+            Nothing here yet. Add a post or Reel above. Stories and profile links are not included.
           </p>
         ) : filtered.length === 0 ? (
-          <p className="panel px-5 py-12 text-sm text-pretty text-muted">Nothing by that name.</p>
+          <p className="panel px-5 py-12 text-sm text-pretty text-muted">No results for that search.</p>
         ) : (
           <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
             {filtered.map((item) => (
@@ -514,23 +515,23 @@ export function ShelfApp() {
       <section className="grid gap-4 lg:grid-cols-2">
         <div className="panel well flex min-h-0 flex-col p-4">
           <div className="mb-3">
-            <h2 className="font-display text-xl font-medium">Your file</h2>
+            <h2 className="font-display text-xl font-medium">Download file</h2>
             <p className="text-sm text-pretty text-well-muted">
-              {result.ok ? cookieLine : "Paste a link to make the file."}
+              {result.ok ? cookieLine : "Add a link to prepare the file."}
             </p>
             {digest ? (
               <p className="mt-1 font-mono text-xs text-well-muted" title={digest}>
-                Check code {digest.slice(0, 12)}
+                SHA-256 {digest.slice(0, 16)}
               </p>
             ) : null}
           </div>
           <pre className="script-scroll min-w-0 font-mono text-sm leading-relaxed">
-            {result.ok ? result.script : items.length === 0 ? "Your file shows up here." : result.error}
+            {result.ok ? result.script : items.length === 0 ? "The file appears here after you add a link." : result.error}
           </pre>
           <div className="mt-4">
             <button type="button" className={secondaryButton} onClick={() => void copyScript()} disabled={!result.ok}>
               <Copy className="size-4" aria-hidden="true" />
-              {copied ? "Copied" : "Copy"}
+              {copied ? "Copied" : "Copy file"}
             </button>
           </div>
         </div>
@@ -547,7 +548,7 @@ export function ShelfApp() {
                   : "h-11 rounded-md text-sm font-medium text-muted"
               }
             >
-              One by one
+              One at a time
             </button>
             <button
               type="button"
@@ -559,18 +560,18 @@ export function ShelfApp() {
                   : "h-11 rounded-md text-sm font-medium text-muted"
               }
             >
-              In one go
+              All at once
             </button>
           </div>
           <p className="mt-2 text-sm text-pretty text-muted">
             {settings.mode === "careful"
-              ? "If one video fails, the others still download."
-              : "Every chosen link downloads together."}
+              ? "If one item fails, the rest continue. Failed links are written to shelf-failed.txt."
+              : "Every selected link is sent in a single run."}
           </p>
 
           <div className="mt-4 grid gap-3">
             <label className="block">
-              <span className="mb-1 block text-sm font-medium text-ink">Downloader</span>
+              <span className="mb-1 block text-sm font-medium text-ink">yt-dlp</span>
               <input
                 value={settings.binary}
                 onChange={(event) => patch({ binary: event.target.value })}
@@ -582,7 +583,7 @@ export function ShelfApp() {
               {binaryError ? <span className="mt-1 block text-sm text-pretty text-danger">{binaryError}</span> : null}
             </label>
             <label className="block">
-              <span className="mb-1 block text-sm font-medium text-ink">Videos go here</span>
+              <span className="mb-1 block text-sm font-medium text-ink">Save folder</span>
               <input
                 value={settings.outputDir}
                 onChange={(event) => patch({ outputDir: event.target.value })}
@@ -594,18 +595,18 @@ export function ShelfApp() {
               {folderError ? (
                 <span className="mt-1 block text-sm text-pretty text-danger">{folderError}</span>
               ) : (
-                <span className="mt-1 block text-sm text-muted">This folder is created for you. Your list stays in this browser.</span>
+                <span className="mt-1 block text-sm text-muted">Created if it does not exist. The library stays in this browser.</span>
               )}
             </label>
           </div>
 
           <details className="mt-3 border-t border-line pt-2">
             <summary className="flex min-h-11 cursor-pointer items-center text-sm font-medium text-ink">
-              Extras
+              More options
             </summary>
             <div className="grid gap-3 pb-1">
               <label className="block">
-                <span className="mb-1 block text-sm font-medium text-ink">Picture</span>
+                <span className="mb-1 block text-sm font-medium text-ink">Format</span>
                 <select
                   value={settings.format}
                   onChange={(event) => patch({ format: event.target.value as Settings["format"] })}
@@ -619,7 +620,7 @@ export function ShelfApp() {
                 </select>
               </label>
               <label className="block">
-                <span className="mb-1 block text-sm font-medium text-ink">Names</span>
+                <span className="mb-1 block text-sm font-medium text-ink">File name</span>
                 <select
                   value={settings.filename}
                   onChange={(event) => patch({ filename: event.target.value as Settings["filename"] })}
@@ -634,7 +635,7 @@ export function ShelfApp() {
               </label>
               <div className="grid grid-cols-2 gap-3">
                 <label className="block">
-                  <span className="mb-1 block text-sm font-medium text-ink">Wait</span>
+                  <span className="mb-1 block text-sm font-medium text-ink">Pause</span>
                   <select
                     value={settings.pauseSeconds}
                     onChange={(event) => patch({ pauseSeconds: Number(event.target.value) as Settings["pauseSeconds"] })}
@@ -643,13 +644,13 @@ export function ShelfApp() {
                   >
                     {PAUSES.map((seconds) => (
                       <option key={seconds} value={seconds}>
-                        {seconds === 0 ? "No wait" : `${seconds}s`}
+                        {seconds === 0 ? "None" : `${seconds} seconds`}
                       </option>
                     ))}
                   </select>
                 </label>
                 <label className="block">
-                  <span className="mb-1 block text-sm font-medium text-ink">Try again</span>
+                  <span className="mb-1 block text-sm font-medium text-ink">Retries</span>
                   <select
                     value={settings.retries}
                     onChange={(event) => patch({ retries: Number(event.target.value) as Settings["retries"] })}
@@ -666,22 +667,22 @@ export function ShelfApp() {
               <Check
                 checked={settings.fullCarousel}
                 onChange={(checked) => patch({ fullCarousel: checked })}
-                label="Save every photo in a set"
+                label="Download every image in a carousel"
               />
               <Check
                 checked={settings.ignoreConfig}
                 onChange={(checked) => patch({ ignoreConfig: checked })}
-                label="Skip old downloader settings"
+                label="Ignore existing yt-dlp settings"
               />
               <Check
                 checked={settings.restrictFilenames}
                 onChange={(checked) => patch({ restrictFilenames: checked })}
-                label="Keep names simple"
+                label="Use safe characters in file names"
               />
               <Check
                 checked={settings.embedMetadata}
                 onChange={(checked) => patch({ embedMetadata: checked })}
-                label="Keep the title inside the video"
+                label="Embed the title in the video file"
               />
             </div>
           </details>

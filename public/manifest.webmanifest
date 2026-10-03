@@ -1,12 +1,12 @@
 {
   "name": "Shelf",
   "short_name": "Shelf",
-  "description": "Paste a link. Keep the video.",
+  "description": "Save Instagram posts and Reels to your Mac.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#f3e9ff",
-  "theme_color": "#f3e9ff",
+  "background_color": "#f6f1ff",
+  "theme_color": "#f6f1ff",
   "icons": [
     {
       "src": "favicon.svg",

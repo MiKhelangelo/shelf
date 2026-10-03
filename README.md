@@ -1,39 +1,37 @@
 # Shelf
 
-Paste a link. Keep the video.
+Save Instagram posts and Reels to your Mac.
 
-Shelf is a quiet place for Instagram posts and Reels. You paste a link, or a whole list. Shelf remembers them, skips copies, and hands you one small file. Open that file on your Mac. The videos land in Downloads.
+Paste one link, or up to 200. Shelf keeps a searchable library, skips duplicates, and saves one file to Downloads. Open that file and the videos are saved on your computer.
 
-Nothing is uploaded. Your login stays in Safari or Firefox.
+Your browser login stays in Safari or Firefox. Nothing is uploaded.
 
-## Three steps
+## Steps
 
-1. Paste a post or Reel. Up to 200 at a time.
-2. Press **Save to Downloads**.
-3. Open the file. The videos follow.
+1. Paste a post or Reel link.
+2. Choose **Save to Downloads**.
+3. Open the file. The videos are saved to `Downloads/Instagram-Reels`.
 
-## What you can do
+## Included
 
-- Keep a shelf you can search later.
-- Skip a video you already saved, or save it again.
-- Show pictures first, if you want them.
-- Download a few at a time, so one failure does not stop the rest.
-- Use the Instagram login already open on your Mac.
+- Search the library by code or link.
+- Skip items you already saved, or download them again.
+- Optional thumbnails before you download.
+- Several downloads at a time. If one fails, the rest continue.
+- Use the Instagram session already open in Safari or Firefox.
 
-Stories and profiles are left out. Posts and Reels are the whole idea.
+Stories and profile links are not included.
 
-## On your Mac
+## Requirements
 
-You need [yt-dlp](https://github.com/yt-dlp/yt-dlp), a free downloader. The usual place is `$HOME/Downloads/yt-dlp_macos`.
+Install [yt-dlp](https://github.com/yt-dlp/yt-dlp). The default path is `$HOME/Downloads/yt-dlp_macos`.
 
 ```bash
 chmod +x shelf-instagram.sh
 ./shelf-instagram.sh
 ```
 
-The videos go to `Downloads/Instagram-Reels`.
-
-## Make it your own
+## Develop
 
 ```bash
 npm install
@@ -41,4 +39,4 @@ npm test
 npm run dev
 ```
 
-The live app is at [mikhelangelo.github.io/shelf](https://mikhelangelo.github.io/shelf/).
+Live app: [mikhelangelo.github.io/shelf](https://mikhelangelo.github.io/shelf/).

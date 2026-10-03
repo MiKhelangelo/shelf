@@ -10,23 +10,24 @@
   --font-display: "Fraunces", "Iowan Old Style", Palatino, serif;
   --font-mono: ui-monospace, "Liberation Mono", "DejaVu Sans Mono", monospace;
 
-  --color-bg: #f3e9ff;
-  --color-bg-rise: #fff6c8;
-  --color-surface: #fffdf8;
-  --color-ink: #2d1b4e;
-  --color-muted: #6d5b8a;
-  --color-line: #e4d4f8;
-  --color-accent: #ffd23f;
-  --color-accent-fg: #2d1b4e;
-  --color-chip: #efe4ff;
-  --color-well: #fff6c2;
-  --color-well-fg: #2d1b4e;
-  --color-well-muted: #6d5b8a;
-  --color-select: #ffd23f;
+  --color-bg: #f6f1ff;
+  --color-bg-rise: #fffaf0;
+  --color-surface: #ffffff;
+  --color-ink: #241542;
+  --color-muted: #4a3b66;
+  --color-line: #d8cce8;
+  --color-accent: #f5c400;
+  --color-accent-fg: #241542;
+  --color-chip: #f3ecff;
+  --color-well: #faf8ff;
+  --color-well-fg: #241542;
+  --color-well-muted: #4a3b66;
+  --color-select: #ffe58a;
   --color-danger: #6b21a8;
+  --color-field: #ffffff;
 
   --radius-lg: 0.5rem;
-  --radius-xl: 1.5rem;
+  --radius-xl: 0.75rem;
   --radius-2xl: 2rem;
 
   --shadow-shine: inset 0 1px 0 color-mix(in oklab, white 16%, transparent);
@@ -46,7 +47,7 @@
     color: var(--color-ink);
     font-family: var(--font-sans);
     font-size: 1rem;
-    line-height: 1.5;
+    line-height: 1.55;
   }
 
   button:not(:disabled),

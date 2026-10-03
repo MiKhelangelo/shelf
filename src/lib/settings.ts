@@ -89,9 +89,9 @@ export const FORMAT_ARG: Record<FormatId, string> = {
 };
 
 export const FORMAT_LABEL: Record<FormatId, string> = {
-  best: "Best picture",
-  mp4: "A video that plays anywhere",
-  merge: "Best picture and sound",
+  best: "Best available",
+  mp4: "MP4",
+  merge: "Best video and audio",
 };
 
 export const NAME_ARG: Record<NameStyle, string> = {
@@ -101,8 +101,8 @@ export const NAME_ARG: Record<NameStyle, string> = {
 };
 
 export const NAME_LABEL: Record<NameStyle, string> = {
-  "uploader-id": "Name and code",
-  id: "Just the code",
+  "uploader-id": "Account and code",
+  id: "Code only",
   "title-id": "Title and code",
 };
 
