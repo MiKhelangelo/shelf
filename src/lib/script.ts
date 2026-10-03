@@ -60,7 +60,7 @@ export function generateScript(items: readonly Item[], settings: Settings): Gene
     return { ok: false, error: "Could not build a safe script from these settings." };
   }
 
-  const withoutArithmetic = script.replace(/\$\(\((?:ok|fail) \+ 1\)\)/g, "");
+  const withoutArithmetic = script.replace(/\$\(\([a-z]+ \+ 1\)\)/g, "");
   if (withoutArithmetic.includes("`") || withoutArithmetic.includes("$(")) {
     return { ok: false, error: "Could not build a safe script from these settings." };
   }
@@ -80,22 +80,30 @@ function render(urls: readonly string[], settings: Settings): string {
 
   if (settings.cookies === "none") {
     lines.push("# No browser cookies. Login-only posts will fail.");
+  } else if (settings.cookies === "firefox") {
+    lines.push("# Reads the Instagram session already logged in to Firefox. Cookies stay in Firefox.");
+  } else if (settings.cookies === "safari") {
+    lines.push("# Reads the Instagram session already logged in to Safari. Cookies stay in Safari.");
   } else {
     lines.push(`# Reads the Instagram session already logged in to ${settings.cookies}.`);
   }
 
-  if (settings.mode === "careful") {
-    lines.push("# One link at a time. A failure is written down and the rest continue.");
+  if (settings.mode === "batch") {
+    lines.push("# One yt-dlp run for the whole list.");
+  } else if (settings.concurrency > 1) {
+    lines.push(`# ${settings.concurrency} downloads at once. A failure is written down and the rest continue.`);
   } else {
-    lines.push("# One yt-dlp run for the whole list, same shape as a single command.");
+    lines.push("# One link at a time. A failure is written down and the rest continue.");
+  }
+
+  if (settings.onDuplicate === "skip") {
+    lines.push("# Links already listed in .shelf-archive.txt are skipped.");
+  } else {
+    lines.push("# Files already in the folder are downloaded again.");
   }
 
   if (settings.fullCarousel) {
     lines.push("# Carousel posts save every slide, not only the first.");
-  }
-
-  if (settings.useArchive && settings.forceOverwrite) {
-    lines.push("# The archive is checked first, so finished links are skipped even with overwrite on.");
   }
 
   lines.push("# Written for the bash that ships with macOS (3.2).");
@@ -106,7 +114,7 @@ function render(urls: readonly string[], settings: Settings): string {
   lines.push("");
   lines.push(`bin=${bin}`);
   lines.push(`out=${out}`);
-  if (settings.useArchive) lines.push('archive="$out/.shelf-archive.txt"');
+  if (settings.onDuplicate === "skip") lines.push('archive="$out/.shelf-archive.txt"');
   lines.push("");
   lines.push('if [ ! -e "$bin" ]; then');
   lines.push("  printf 'yt-dlp was not found at: %s\\n' \"$bin\" >&2");
@@ -149,6 +157,8 @@ function render(urls: readonly string[], settings: Settings): string {
     lines.push('  exit "$status"');
     lines.push("fi");
     lines.push("printf 'Finished.\\n'");
+  } else if (settings.concurrency > 1) {
+    lines.push(...parallelLoop(settings.concurrency));
   } else {
     lines.push("ok=0");
     lines.push("fail=0");
@@ -185,6 +195,66 @@ function render(urls: readonly string[], settings: Settings): string {
   return `${lines.join("\n")}\n`;
 }
 
+function parallelLoop(limit: number): string[] {
+  if (!/^[1-4]$/.test(String(limit))) throw new Error("Unexpected concurrency.");
+  return [
+    "ok=0",
+    "fail=0",
+    'failed_list="$out/shelf-failed.txt"',
+    ': > "$failed_list"',
+    'status_dir="$out/.shelf-status"',
+    'rm -rf -- "$status_dir"',
+    'mkdir -p -- "$status_dir"',
+    "running=0",
+    `limit=${limit}`,
+    "index=0",
+    "",
+    'for url in "${urls[@]}"; do',
+    "  index=$((index + 1))",
+    "  (",
+    '    "$bin" "${args[@]}" -- "$url"',
+    "    status=$?",
+    '    if [ "$status" -eq 0 ]; then',
+    '      printf \'ok\\n\' > "$status_dir/$index"',
+    "    else",
+    '      printf \'fail\\n%s\\n\' "$url" > "$status_dir/$index"',
+    '      printf \'failed (exit %s): %s\\n\' "$status" "$url" >&2',
+    "    fi",
+    "  ) &",
+    "  running=$((running + 1))",
+    '  if [ "$running" -ge "$limit" ]; then',
+    "    wait",
+    "    running=0",
+    "  fi",
+    "done",
+    "wait",
+    "",
+    'for stamp in "$status_dir"/*; do',
+    '  if [ ! -f "$stamp" ]; then',
+    "    continue",
+    "  fi",
+    "  {",
+    "    read -r mark",
+    '    if [ "$mark" = "fail" ]; then',
+    "      read -r bad",
+    '      printf \'%s\\n\' "$bad" >> "$failed_list"',
+    "      fail=$((fail + 1))",
+    "    else",
+    "      ok=$((ok + 1))",
+    "    fi",
+    '  } < "$stamp"',
+    "done",
+    'rm -rf -- "$status_dir"',
+    "",
+    "printf '\\nFinished. %s saved, %s failed, %s total.\\n' \"$ok\" \"$fail\" \"${#urls[@]}\"",
+    'if [ "$fail" -gt 0 ]; then',
+    "  printf 'Failed links were written to %s\\n' \"$failed_list\" >&2",
+    "  exit 1",
+    "fi",
+    'rm -f -- "$failed_list"',
+  ];
+}
+
 function argLines(settings: Settings): string[] {
   const lines: string[] = [];
   const add = (line: string) => lines.push(line);
@@ -200,7 +270,7 @@ function argLines(settings: Settings): string[] {
   } else {
     add(flag("--no-cookies"));
   }
-  add(flag(settings.forceOverwrite ? "--force-overwrites" : "--no-overwrites"));
+  add(flag(settings.onDuplicate === "redownload" ? "--force-overwrites" : "--no-overwrites"));
   add(`${flag("-f")} ${shSingle(FORMAT_ARG[settings.format])}`);
   add(flag(settings.fullCarousel ? "--yes-playlist" : "--no-playlist"));
   if (!/^(5|10|20)$/.test(String(settings.retries))) throw new Error("Unexpected retries.");
@@ -210,7 +280,7 @@ function argLines(settings: Settings): string[] {
   if (settings.restrictFilenames) add(flag("--restrict-filenames"));
   if (settings.embedMetadata) add(flag("--embed-metadata"));
   if (settings.format === "merge") add(`${flag("--merge-output-format")} mp4`);
-  if (settings.useArchive) add(`${flag("--download-archive")} "$archive"`);
+  if (settings.onDuplicate === "skip") add(`${flag("--download-archive")} "$archive"`);
   if (settings.mode === "batch" && settings.pauseSeconds > 0) {
     if (!/^(1|2|3|5)$/.test(String(settings.pauseSeconds))) throw new Error("Unexpected pause.");
     add(`${flag("--sleep-interval")} ${settings.pauseSeconds}`);

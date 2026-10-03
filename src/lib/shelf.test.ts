@@ -4,7 +4,7 @@ import { chmodSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
-import { extractInstagramUrls, mergeLinks, parseInstagramUrl } from "./instagram.ts";
+import { capIncoming, extractInstagramUrls, mergeLinks, parseInstagramUrl } from "./instagram.ts";
 import { generateScript } from "./script.ts";
 import { seedItems, SEED_URLS } from "./seed.ts";
 import { defaultSettings, type Settings } from "./settings.ts";
@@ -71,11 +71,13 @@ test("default script is bash-valid and keeps every seed link", () => {
     const occurrences: number = result.script.split(item.url).length - 1;
     assert.equal(occurrences, 1, item.url);
   }
-  assert.match(result.script, /--no-cookies/);
+  assert.match(result.script, /--cookies-from-browser safari/);
   assert.match(result.script, /--no-mtime/);
-  assert.doesNotMatch(result.script, /cookies-from-browser/);
+  assert.doesNotMatch(result.script, /--no-cookies/);
   assert.doesNotMatch(result.script, /uploader/);
-  assert.match(result.script, /--force-overwrites/);
+  assert.match(result.script, /--download-archive/);
+  assert.match(result.script, /--no-overwrites/);
+  assert.match(result.script, /limit=3/);
   assert.match(result.script, /-f 'best'/);
   assert.match(result.script, /--ignore-config/);
   assert.match(result.script, /--no-update/);
@@ -160,7 +162,7 @@ test("storage drops tampered links and illegal enums", () => {
   assert.equal(parsed?.items.length, 1);
   assert.equal(parsed?.items[0]?.selected, false);
   assert.equal(parsed?.items[0]?.url, "https://www.instagram.com/reel/DaiB5OdoqWX/");
-  assert.equal(parsed?.settings.cookies, "none");
+  assert.equal(parsed?.settings.cookies, "safari");
   assert.equal(parsed?.settings.pauseSeconds, 1);
   assert.equal(parsed?.settings.mode, "batch");
   assert.equal(parsed?.settings.binary, defaultSettings.binary);
@@ -173,6 +175,18 @@ test("merge reports duplicates already queued", () => {
   assert.equal(merged.added, 1);
   assert.equal(merged.duplicates, 1);
   assert.equal(merged.items.length, 2);
+});
+
+test("a paste keeps the first 200 links and reports the rest", () => {
+  const lines = Array.from({ length: 210 }, (_, index) => {
+    const code = `Abcde${String(index).padStart(4, "0")}`.slice(0, 11);
+    return `https://www.instagram.com/reel/${code}/`;
+  });
+  const extracted = extractInstagramUrls(lines.join("\n"));
+  assert.equal(extracted.links.length, 210);
+  const capped = capIncoming(extracted.links);
+  assert.equal(capped.links.length, 200);
+  assert.equal(capped.overflow, 10);
 });
 
 test("careful mode keeps going when one link fails", () => {
@@ -197,6 +211,7 @@ exit 0
     binary: "$HOME/yt-dlp_macos",
     outputDir: "$HOME/Instagram-Reels",
     pauseSeconds: 0,
+    concurrency: 1,
   };
   const result = generateScript(seedItems().slice(0, 2), settings);
   assert.equal(result.ok, true);
@@ -211,6 +226,49 @@ exit 0
   assert.equal(run.status, 1, run.stderr);
   const urls = readFileSync(join(home, "urls.txt"), "utf8").trim().split("\n");
   assert.deepEqual(urls, [SEED_URLS[0], SEED_URLS[1]]);
+  const failed = readFileSync(join(home, "Instagram-Reels", "shelf-failed.txt"), "utf8");
+  assert.match(failed, /Dd3tsoHmHuH/);
+  assert.doesNotMatch(failed, /Ddqg_NAmSJ1/);
+});
+
+test("concurrent downloads still record a failure", () => {
+  const home = mkdtempSync(join(tmpdir(), "shelf-home-"));
+  const bin = join(home, "yt-dlp_macos");
+  writeFileSync(
+    bin,
+    `#!/bin/sh
+last=""
+for last do :; done
+printf '%s\\n' "$last" >> "$HOME/urls.txt"
+case "$last" in
+  *Dd3tsoHmHuH*) exit 9 ;;
+esac
+exit 0
+`,
+  );
+  chmodSync(bin, 0o755);
+
+  const settings: Settings = {
+    ...defaultSettings,
+    binary: "$HOME/yt-dlp_macos",
+    outputDir: "$HOME/Instagram-Reels",
+    pauseSeconds: 0,
+    concurrency: 2,
+  };
+  const result = generateScript(seedItems().slice(0, 2), settings);
+  assert.equal(result.ok, true);
+  if (!result.ok) return;
+  assert.match(result.script, /limit=2/);
+
+  const scriptPath = join(home, "shelf-instagram.sh");
+  writeFileSync(scriptPath, result.script);
+  const run = spawnSync("bash", [scriptPath], {
+    env: { ...process.env, HOME: home },
+    encoding: "utf8",
+  });
+  assert.equal(run.status, 1, run.stderr);
+  const urls = readFileSync(join(home, "urls.txt"), "utf8").trim().split("\n").sort();
+  assert.deepEqual(urls, [SEED_URLS[0], SEED_URLS[1]].sort());
   const failed = readFileSync(join(home, "Instagram-Reels", "shelf-failed.txt"), "utf8");
   assert.match(failed, /Dd3tsoHmHuH/);
   assert.doesNotMatch(failed, /Ddqg_NAmSJ1/);

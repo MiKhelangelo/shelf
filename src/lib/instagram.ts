@@ -125,6 +125,24 @@ export function extractInstagramUrls(text: string): ExtractResult {
   return { links, rejected, duplicates };
 }
 
+export const PASTE_LIMIT = 200;
+export const LIBRARY_LIMIT = 2000;
+
+export function capIncoming(links: readonly ParsedLink[]): { links: ParsedLink[]; overflow: number } {
+  if (links.length <= PASTE_LIMIT) return { links: [...links], overflow: 0 };
+  return { links: links.slice(0, PASTE_LIMIT), overflow: links.length - PASTE_LIMIT };
+}
+
+export function matchesQuery(item: Item, query: string): boolean {
+  const needle = query.trim().toLowerCase();
+  if (!needle) return true;
+  return (
+    item.shortcode.toLowerCase().includes(needle) ||
+    item.url.toLowerCase().includes(needle) ||
+    item.kind.includes(needle)
+  );
+}
+
 export function mergeLinks(
   existing: readonly Item[],
   incoming: readonly ParsedLink[],

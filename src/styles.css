@@ -33,7 +33,7 @@
 
 @layer base {
   html {
-    color-scheme: light;
+    color-scheme: dark;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
@@ -51,6 +51,10 @@
   button:not(:disabled),
   [role="button"]:not(:disabled) {
     cursor: pointer;
+  }
+
+  fieldset {
+    min-width: 0;
   }
 
   :focus-visible {
@@ -88,7 +92,10 @@
 
   .script-scroll {
     max-height: 16rem;
+    max-width: 100%;
     overflow: auto;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
   }
 }
 

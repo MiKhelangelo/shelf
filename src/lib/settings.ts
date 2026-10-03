@@ -1,6 +1,9 @@
 export const COOKIE_BROWSERS = ["safari", "chrome", "firefox", "brave", "edge", "none"] as const;
 export type CookieBrowser = (typeof COOKIE_BROWSERS)[number];
 
+export const SESSIONS = ["safari", "firefox", "none"] as const;
+export type Session = (typeof SESSIONS)[number];
+
 export const FORMATS = ["best", "mp4", "merge"] as const;
 export type FormatId = (typeof FORMATS)[number];
 
@@ -13,7 +16,11 @@ export type Pause = (typeof PAUSES)[number];
 export const RETRIES = [5, 10, 20] as const;
 export type Retries = (typeof RETRIES)[number];
 
+export const CONCURRENCY = [1, 2, 3, 4] as const;
+export type Concurrency = (typeof CONCURRENCY)[number];
+
 export type RunMode = "careful" | "batch";
+export type OnDuplicate = "skip" | "redownload";
 
 export type Settings = {
   binary: string;
@@ -30,23 +37,29 @@ export type Settings = {
   mode: RunMode;
   pauseSeconds: Pause;
   retries: Retries;
+  concurrency: Concurrency;
+  onDuplicate: OnDuplicate;
+  showThumbnails: boolean;
 };
 
 export const defaultSettings: Settings = {
   binary: "$HOME/Downloads/yt-dlp_macos",
   outputDir: "$HOME/Downloads/Instagram-Reels",
-  cookies: "none",
+  cookies: "safari",
   format: "best",
   filename: "id",
-  forceOverwrite: true,
+  forceOverwrite: false,
   ignoreConfig: true,
-  useArchive: false,
+  useArchive: true,
   restrictFilenames: true,
   embedMetadata: false,
   fullCarousel: true,
   mode: "careful",
   pauseSeconds: 1,
   retries: 10,
+  concurrency: 3,
+  onDuplicate: "skip",
+  showThumbnails: false,
 };
 
 const PATH_RE = /^(?:\$HOME|~|\/)(?:\/[A-Za-z0-9._+-]+)+$/;
@@ -102,6 +115,12 @@ export const BROWSER_LABEL: Record<CookieBrowser, string> = {
   none: "No cookies",
 };
 
+export const SESSION_LABEL: Record<Session, string> = {
+  safari: "Safari",
+  firefox: "Firefox",
+  none: "Off",
+};
+
 function isOneOf<T extends string>(value: unknown, options: readonly T[]): value is T {
   return typeof value === "string" && (options as readonly string[]).includes(value);
 }
@@ -136,5 +155,10 @@ export function sanitizeSettings(input: unknown): Settings {
       ? raw.pauseSeconds
       : defaultSettings.pauseSeconds,
     retries: isOneOfNumber(raw.retries, RETRIES) ? raw.retries : defaultSettings.retries,
+    concurrency: isOneOfNumber(raw.concurrency, CONCURRENCY)
+      ? raw.concurrency
+      : defaultSettings.concurrency,
+    onDuplicate: raw.onDuplicate === "redownload" ? "redownload" : "skip",
+    showThumbnails: raw.showThumbnails === true,
   };
 }
