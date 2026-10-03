@@ -80,7 +80,6 @@ export function ShelfApp() {
   const [copied, setCopied] = useState(false);
   const [hydrated, setHydrated] = useState(false);
   const [armClear, setArmClear] = useState(false);
-  const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
   const [digest, setDigest] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -126,16 +125,6 @@ export function ShelfApp() {
     () => items.filter((item) => (kind === "all" || item.kind === kind) && matchesQuery(item, query)),
     [items, kind, query],
   );
-
-  useEffect(() => {
-    if (!result.ok) {
-      setDownloadUrl(null);
-      return;
-    }
-    const url = URL.createObjectURL(new Blob([result.script], { type: "text/plain;charset=utf-8" }));
-    setDownloadUrl(url);
-    return () => URL.revokeObjectURL(url);
-  }, [result]);
 
   useEffect(() => {
     if (!result.ok) {
@@ -185,6 +174,21 @@ export function ShelfApp() {
       ),
     );
     return true;
+  }
+
+  function saveToDownloads() {
+    if (!result.ok) return;
+    const blob = new Blob([result.script], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = "shelf-instagram.sh";
+    anchor.rel = "noopener";
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1500);
+    setNotice("Saved shelf-instagram.sh to your Downloads folder.");
   }
 
   async function copyScript() {
@@ -259,15 +263,10 @@ export function ShelfApp() {
       ? "The library is empty."
       : `${counts.selected} of ${items.length} included. ${filtered.length} showing.`;
 
-  const downloadButton = downloadUrl ? (
-    <a href={downloadUrl} download="shelf-instagram.sh" className={`${primaryButton} w-full sm:w-auto`}>
+  const downloadButton = (
+    <button type="button" className={`${primaryButton} w-full sm:w-auto`} onClick={saveToDownloads} disabled={!result.ok}>
       <Download className="size-4" aria-hidden="true" />
-      Download
-    </a>
-  ) : (
-    <button type="button" className={`${primaryButton} w-full sm:w-auto`} disabled>
-      <Download className="size-4" aria-hidden="true" />
-      Download
+      Save to Downloads
     </button>
   );
 
@@ -428,8 +427,8 @@ export function ShelfApp() {
         </div>
         <p className="text-sm text-pretty text-muted">
           {result.ok
-            ? `Saves shelf-instagram.sh. ${settings.cookies === "none" ? "No cookies." : `${BROWSER_LABEL[settings.cookies]} login, on your Mac only.`}${digest ? ` sha256 ${digest.slice(0, 12)}` : ""}`
-            : "Add a link to enable download."}
+            ? `Puts shelf-instagram.sh in Downloads. Running it saves the videos to ${settings.outputDir}. ${settings.cookies === "none" ? "No cookies." : `${BROWSER_LABEL[settings.cookies]} login, on your Mac only.`}${digest ? ` sha256 ${digest.slice(0, 12)}` : ""}`
+            : "Add a link, then save the script to Downloads."}
         </p>
       </section>
 
