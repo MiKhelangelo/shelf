@@ -57,8 +57,9 @@
     const count = selected().length;
     $('#selected-count').textContent = plural(count, 'selected item');
     const ready = count > 0 && count <= 500 && !indexing;
-    $('#script').disabled = $('#guide-script').disabled = !ready;
-    $('#script').title = count > 500 ? 'Choose at most 500 items per script.' : 'Download a script for selected items';
+    ['script', 'script-bar', 'guide-script'].forEach((id) => { $('#' + id).disabled = !ready; });
+    const scriptTitle = count > 500 ? 'Choose at most 500 items per script.' : 'Download a script for selected items';
+    $('#script').title = $('#script-bar').title = scriptTitle;
     $('#guide-script').textContent = count > 500 ? 'Select at most 500 items' : `Download script${count ? ` (${count})` : ''}`;
     const list = visible();
     $('#all').disabled = indexing || list.length === 0;
@@ -77,13 +78,13 @@
     li.dataset.code = i.code;
     const top = el('div', { className: 'item-top' }, cb, el('span', { className: 'item-symbol', textContent: i.kind === 'post' ? '▦' : '▷' }), el('span', { className: 'item-type', textContent: i.kind }), el('span', { className: 'item-code', textContent: i.code }));
     top.querySelector('.item-symbol').setAttribute('aria-hidden', 'true');
-    const body = el('div', { className: 'item-content' }, el('h3', { textContent: label(i) }), el('p', { className: 'item-author', textContent: i.author ? (i.author.startsWith('@') ? i.author : '@' + i.author) : 'Creator available after indexing' }));
+    const body = el('div', { className: 'item-content' }, el('h3', { textContent: label(i) }), el('p', { className: 'item-author', textContent: i.author ? (i.author.startsWith('@') ? i.author : '@' + i.author) : 'Creator appears after you open the saved folder.' }));
     if (i.caption) {
       body.append(el('p', { className: 'item-caption', textContent: i.caption }));
       const details = el('details', {}, el('summary', { className: 'item-caption-summary', textContent: 'Full caption' }), el('p', { className: 'full-caption', textContent: i.caption })); body.append(details);
-    } else body.append(el('p', { className: 'item-caption', textContent: 'A link worth coming back to. Add a note now, or index the saved files for its original caption.' }));
+    } else body.append(el('p', { className: 'item-caption', textContent: 'No caption yet. Add a note, or open the saved folder.' }));
     if (i.userNote || (i.note && i.status !== 'failed')) body.append(el('p', { className: 'item-note', textContent: i.userNote || i.note }));
-    const statusLabel = i.status === 'saved' ? 'Indexed' : i.status === 'failed' ? 'Needs attention' : 'To save';
+    const statusLabel = i.status === 'saved' ? 'Found in folder' : i.status === 'failed' ? 'Failed' : 'Not saved';
     body.append(el('span', { className: 'item-status ' + i.status, textContent: statusLabel }));
     const files = videos.get(i.code) || [];
     if (files.length) body.append(el('p', { className: 'availability', textContent: `${plural(files.length, 'local video')} connected` }));
@@ -104,15 +105,16 @@
     $('#more').hidden = list.length <= shown;
     $('#more').textContent = `Show more (${Math.min(36, Math.max(0, list.length - shown))})`;
     $('#result-count').textContent = plural(list.length, 'item');
-    const names = { all: 'All items', todo: 'To save', saved: 'Indexed', failed: 'Needs attention' };
+    const names = { all: 'All items', todo: 'Not saved', saved: 'Found in folder', failed: 'Failed' };
     $('#library-title').textContent = names[filter];
-    $('#view-title').replaceChildren(document.createTextNode(filter === 'all' ? 'Your library' : names[filter]), el('span', { className: 'title-dot', textContent: '.' }));
+    $('#view-title').replaceChildren(document.createTextNode(filter === 'all' ? 'This page keeps your links' : names[filter]), el('span', { className: 'title-dot', textContent: '.' }));
     ['all', 'todo', 'saved', 'failed'].forEach((f) => { $('#count-' + f).textContent = items.filter((i) => f === 'all' || (f === 'todo' ? i.status !== 'saved' : i.status === f)).length; });
     $('#navigation').querySelectorAll('button').forEach((b) => { b.classList.toggle('active', b.dataset.filter === filter); if (b.dataset.filter === filter) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current'); });
     $('#export').disabled = !items.length && !rawRecovery;
     const indexed = items.filter((i) => i.status === 'saved').length;
     $('#folder-note').hidden = !indexed && !folderName;
-    $('#folder-note').textContent = folderName ? `${folderName} · ${plural(videos.size, 'item')} connected this session. Files stay on your device. Open another folder to replace this connection.` : 'Your indexed metadata is remembered. Open the saved folder again to play local videos; browsers don’t retain file access after reload.';
+    $('#folder-note').textContent = folderName ? `${folderName} · ${plural(videos.size, 'item')} connected this session. Files stay on your device. Open the folder again after a reload.` : 'Shelf remembers captions from the last folder you opened. Reopen that folder to play the videos.';
+    $('#reconnect-note').hidden = items.length === 0;
     updateSelection();
   }
   function add(text) {
@@ -229,7 +231,12 @@
   $('#q').oninput = $('#kind').onchange = $('#sort').onchange = () => { shown = 36; render(); };
   $('#all').onclick = () => { const list = visible(), state = list.some((i) => !i.selected); list.forEach((i) => { i.selected = state; }); persist(); render(); };
   $('#reset').onclick = () => { filter = 'all'; $('#q').value = ''; $('#kind').value = 'all'; shown = 36; render(); $('#q').focus(); };
-  $('#script').onclick = $('#guide-script').onclick = getScript;
+  $('#script').onclick = $('#script-bar').onclick = $('#guide-script').onclick = getScript;
+  $('#copy-lines').onclick = async () => {
+    const text = $('#terminal-lines').textContent.trim();
+    try { await navigator.clipboard.writeText(text); toast('Copied the three Terminal lines.'); }
+    catch (e) { toast('Select the three lines and copy them.'); }
+  };
   $('#help').onclick = $('#workflow-help').onclick = guide;
   $('#empty-add').onclick = () => $('#paste').focus();
   $('#more').onclick = () => { shown += 36; render(); $('#more').focus({ preventScroll: true }); };

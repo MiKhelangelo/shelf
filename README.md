@@ -22,9 +22,9 @@ You can use the link library without the script. Script batches support 1–500 
 
 ## Honest statuses and limits
 
-- **To save:** a link is in the library; no local media has been indexed.
-- **Indexed:** the user selected a nonempty local video in a recognized shortcode folder. This is evidence of a file, not proof that the entire post downloaded or that the file can be decoded.
-- **Needs attention:** a `shelf-failed.txt` entry exists. Partial files can still be playable, but the post remains eligible for retry.
+- **Not saved:** a link is in the library; no local media has been found in a folder you opened.
+- **Found in folder:** you selected a nonempty local video in a recognized shortcode folder. This is evidence of a file, not proof that the entire post downloaded or that the file can be decoded. Reopen the folder after a reload to play it.
+- **Failed:** a `shelf-failed.txt` entry exists. Partial files can still be playable, but the post remains eligible for retry.
 - A separate **connected** message means the file is accessible in the current tab. Indexed metadata persists; file access does not.
 - Instagram may require login or block public requests. Private, removed, login-required, and some photo-only posts cannot be saved by this workflow. Shelf does not bypass those restrictions.
 - Script creation does not change save status. The page cannot run the script, watch folders, or infer Terminal results.
