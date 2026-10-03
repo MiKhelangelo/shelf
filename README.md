@@ -2,9 +2,21 @@
 
 Saves posts and Reels you choose to your Mac. Everything stays on your computer.
 
-There is no Shelf account, no upload, and no Shelf server. Shelf does not sign in to Instagram, does not open private accounts, and does not share what you save. Not affiliated with Instagram or Meta. Respect the creator’s rights and Instagram’s terms.
+There is no Shelf account, no upload, and no Shelf server. Shelf does not sign in to Instagram and does not read Safari, Chrome, or Firefox cookies. Private posts will not download. Nothing you save is shared. Not affiliated with Instagram or Meta. Respect the creator’s rights and Instagram’s terms.
 
-The page is the product. It works on macOS 12 or later. Safari cannot give a website a folder, so the page does not write videos itself. If you want the video files, save `shelf-instagram.sh` and run it in Terminal. The page shows the file’s SHA-256 checksum and what each step does. There is no signed `.dmg`, because this project has no Apple Developer certificate.
+This repository is only the local app. It does not include accounts, a database, or a server.
+
+The page is the product. macOS 12 or later. Save `shelf-instagram.sh` only if you want the video files. The page shows that file’s SHA-256 checksum and what each step does. The file always passes `--no-cookies`.
+
+## Mac window
+
+`mac/` is a small Swift window around the same page. It does not read browser cookies. It is not signed or notarized, so macOS may ask you to allow it.
+
+1. On a Mac, open Terminal in this folder.
+2. Run `bash mac/build.sh`.
+3. Open `mac/Shelf.app`.
+
+There is no signed `.dmg`.
 
 Questions and takedown requests: [GitHub issues](https://github.com/MiKhelangelo/shelf/issues).
 
@@ -18,9 +30,6 @@ Questions and takedown requests: [GitHub issues](https://github.com/MiKhelangelo
 
 - Search your own library by title, tag, author, or note.
 - Grid and list views, collections, and a status for each item: Chosen, Saved, Failed, or Already have it.
-- Search by a word across a saved index of public Reel links.
-- Press **Find reels** with the box empty for a random set from that index.
-- Submit a Reel of your own. It stays in this browser.
 - Skip items you already saved, or download them again.
 - Optional thumbnails before you download.
 - If one video fails, the rest continue, and Terminal says the post may be private, deleted, or changed.

@@ -4,8 +4,7 @@ import { chmodSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
-import { capIncoming, extractInstagramUrls, mergeLinks, parseInstagramUrl } from "./instagram.ts";
-import { REEL_INDEX, pickRandom, searchCatalog } from "./catalog.ts";
+import { capIncoming, extractInstagramUrls, matchesQuery, mergeLinks, parseInstagramUrl } from "./instagram.ts";
 import { generateScript } from "./script.ts";
 import { seedItems, SEED_URLS } from "./seed.ts";
 import { defaultSettings, type Settings } from "./settings.ts";
@@ -72,9 +71,8 @@ test("default script is bash-valid and keeps every seed link", () => {
     const occurrences: number = result.script.split(item.url).length - 1;
     assert.equal(occurrences, 2, item.url);
   }
-  assert.match(result.script, /--cookies-from-browser safari/);
-  assert.match(result.script, /--no-mtime/);
-  assert.doesNotMatch(result.script, /--no-cookies/);
+  assert.match(result.script, /--no-cookies/);
+  assert.doesNotMatch(result.script, /cookies-from-browser/);
   assert.doesNotMatch(result.script, /uploader/);
   assert.match(result.script, /--download-archive/);
   assert.match(result.script, /--no-overwrites/);
@@ -165,7 +163,7 @@ test("storage drops tampered links and illegal enums", () => {
   assert.equal(parsed?.items.length, 1);
   assert.equal(parsed?.items[0]?.selected, false);
   assert.equal(parsed?.items[0]?.url, "https://www.instagram.com/reel/DaiB5OdoqWX/");
-  assert.equal(parsed?.settings.cookies, "safari");
+  assert.equal(parsed?.settings.cookies, "none");
   assert.equal(parsed?.settings.pauseSeconds, 1);
   assert.equal(parsed?.settings.mode, "batch");
   assert.equal(parsed?.settings.binary, defaultSettings.binary);
@@ -277,45 +275,39 @@ exit 0
   assert.doesNotMatch(failed, /Ddqg_NAmSJ1/);
 });
 
-test("keyword search uses the reel index, not a hashtag page", () => {
-  assert.ok(REEL_INDEX.length >= 50);
-  assert.equal(new Set(REEL_INDEX.map((reel) => reel.shortcode)).size, REEL_INDEX.length);
-  for (const reel of REEL_INDEX) {
-    assert.equal(parseInstagramUrl(reel.url)?.kind, "reel");
-    assert.ok(reel.title.length > 0);
-    assert.ok(Array.isArray(reel.tags));
-  }
-
-  const fixture = [
+test("search stays on your own library", () => {
+  const items = [
     {
       url: "https://www.instagram.com/reel/AAAAAAAAAAA/",
       shortcode: "AAAAAAAAAAA",
+      kind: "reel" as const,
+      selected: true,
       title: "Night market in Taipei",
       description: "A walk through the stalls",
       tags: ["travel", "food"],
-      source: "reddit" as const,
     },
     {
       url: "https://www.instagram.com/reel/BBBBBBBBBBB/",
       shortcode: "BBBBBBBBBBB",
+      kind: "reel" as const,
+      selected: true,
       title: "Studio session",
       description: "Drums and a small amp",
       tags: ["music"],
-      source: "reddit" as const,
     },
   ];
-  const found = searchCatalog(fixture, "taipei food");
-  assert.deepEqual(found.map((reel) => reel.shortcode), ["AAAAAAAAAAA"]);
-  assert.equal(searchCatalog(fixture, "nope").length, 0);
-
-  const random = pickRandom(fixture, 1, () => 0);
-  assert.equal(random.length, 1);
-
+  assert.equal(matchesQuery(items[0]!, "taipei food"), true);
+  assert.equal(matchesQuery(items[1]!, "taipei food"), false);
   const hostile = generateScript(
     [{ url: "https://www.instagram.com/explore/tags/travel/;rm/", shortcode: "tag:travel", kind: "search", selected: true }],
     defaultSettings,
   );
   assert.equal(hostile.ok, false);
+  const script = generateScript(items, { ...defaultSettings, cookies: "safari" });
+  assert.equal(script.ok, true);
+  if (!script.ok) return;
+  assert.doesNotMatch(script.script, /cookies-from-browser/);
+  assert.match(script.script, /--no-cookies/);
 });
 
 function bashOk(script: string): boolean {

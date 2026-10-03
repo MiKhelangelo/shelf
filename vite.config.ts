@@ -3,8 +3,9 @@ import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 
 const pages = process.env.GITHUB_PAGES === "1";
+const native = process.env.SHELF_NATIVE === "1";
 
 export default defineConfig({
-  base: pages ? "/shelf/" : "/",
+  base: native ? "./" : pages ? "/shelf/" : "/",
   plugins: [react(), tailwindcss()],
 });

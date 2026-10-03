@@ -85,15 +85,7 @@ function render(urls: readonly string[], settings: Settings, items: readonly Ite
     `# ${urls.length} ${urls.length === 1 ? "link" : "links"}. Nothing here is sent away.`,
   ];
 
-  if (settings.cookies === "none") {
-    lines.push("# No login. Private posts will not download.");
-  } else if (settings.cookies === "firefox") {
-    lines.push("# Uses the Instagram login already open in Firefox. It stays in Firefox.");
-  } else if (settings.cookies === "safari") {
-    lines.push("# Uses the Instagram login already open in Safari. It stays in Safari.");
-  } else {
-    lines.push(`# Uses the Instagram login already open in ${settings.cookies}.`);
-  }
+  lines.push("# Does not read browser cookies. Private posts will not download.");
 
   if (settings.mode === "batch") {
     lines.push("# The whole list goes in one run.");
@@ -305,14 +297,7 @@ function argLines(settings: Settings): string[] {
   add(flag("--no-update"));
   add(flag("--no-mtime"));
   if (settings.ignoreConfig) add(flag("--ignore-config"));
-  if (settings.cookies !== "none") {
-    if (!/^(safari|chrome|firefox|brave|edge)$/.test(settings.cookies)) {
-      throw new Error("Unexpected browser.");
-    }
-    add(`${flag("--cookies-from-browser")} ${settings.cookies}`);
-  } else {
-    add(flag("--no-cookies"));
-  }
+  add(flag("--no-cookies"));
   add(flag(settings.onDuplicate === "redownload" ? "--force-overwrites" : "--no-overwrites"));
   add(`${flag("-f")} ${shSingle(FORMAT_ARG[settings.format])}`);
   add(flag(settings.fullCarousel ? "--yes-playlist" : "--no-playlist"));

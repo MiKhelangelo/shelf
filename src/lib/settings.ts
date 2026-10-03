@@ -45,7 +45,7 @@ export type Settings = {
 export const defaultSettings: Settings = {
   binary: "$HOME/Downloads/yt-dlp_macos",
   outputDir: "$HOME/Downloads/Instagram-Reels",
-  cookies: "safari",
+  cookies: "none",
   format: "best",
   filename: "id",
   forceOverwrite: false,
@@ -134,7 +134,7 @@ export function sanitizeSettings(input: unknown): Settings {
   return {
     binary: typeof raw.binary === "string" ? raw.binary : defaultSettings.binary,
     outputDir: typeof raw.outputDir === "string" ? raw.outputDir : defaultSettings.outputDir,
-    cookies: isOneOf(raw.cookies, COOKIE_BROWSERS) ? raw.cookies : defaultSettings.cookies,
+    cookies: "none",
     format: isOneOf(raw.format, FORMATS) ? raw.format : defaultSettings.format,
     filename: isOneOf(raw.filename, NAME_STYLES) ? raw.filename : defaultSettings.filename,
     forceOverwrite:

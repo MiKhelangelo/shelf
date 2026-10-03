@@ -14,11 +14,8 @@ import {
   type Kind,
   type SaveStatus,
 } from "./lib/instagram";
-import { pickRandom, REEL_INDEX, sanitizeReel, searchCatalog, wordsOf, type ReelRecord } from "./lib/catalog";
 import { generateScript } from "./lib/script";
-import { readSubmissions, saveSubmission } from "./lib/submissions";
 import {
-  BROWSER_LABEL,
   CONCURRENCY,
   defaultSettings,
   FORMAT_LABEL,
@@ -28,9 +25,6 @@ import {
   PAUSES,
   pathError,
   RETRIES,
-  SESSION_LABEL,
-  SESSIONS,
-  type Session,
   type Settings,
 } from "./lib/settings";
 import { readShelfState, writeShelfState } from "./lib/storage";
@@ -70,23 +64,11 @@ function statusLabel(status: SaveStatus): string {
   return "Chosen";
 }
 
-function sessionOf(cookies: Settings["cookies"]): Session {
-  if (cookies === "firefox" || cookies === "none") return cookies;
-  return "safari";
-}
-
 export function ShelfApp() {
   const [items, setItems] = useState<Item[]>([]);
   const [settings, setSettings] = useState<Settings>(defaultSettings);
   const [list, setList] = useState("");
   const [query, setQuery] = useState("");
-  const [randomHits, setRandomHits] = useState<ReelRecord[] | null>(null);
-  const [submissions, setSubmissions] = useState<ReelRecord[]>([]);
-  const [draftUrl, setDraftUrl] = useState("");
-  const [draftTitle, setDraftTitle] = useState("");
-  const [draftTags, setDraftTags] = useState("");
-  const [draftDescription, setDraftDescription] = useState("");
-  const [draftAuthor, setDraftAuthor] = useState("");
   const [collection, setCollection] = useState("");
   const [collectionFilter, setCollectionFilter] = useState("all");
   const [view, setView] = useState<"grid" | "list">("grid");
@@ -105,7 +87,6 @@ export function ShelfApp() {
       setItems(saved.items);
       setSettings(saved.settings);
     }
-    setSubmissions(readSubmissions());
     setHydrated(true);
   }, []);
 
@@ -113,14 +94,6 @@ export function ShelfApp() {
     if (!hydrated) return;
     writeShelfState({ items, settings });
   }, [hydrated, items, settings]);
-
-  useEffect(() => {
-    if (!hydrated) return;
-    if (settings.cookies === "safari" || settings.cookies === "firefox" || settings.cookies === "none") {
-      return;
-    }
-    setSettings((current) => ({ ...current, cookies: "safari" }));
-  }, [hydrated, settings.cookies]);
 
   useEffect(() => {
     if (!armClear) return;
@@ -138,15 +111,6 @@ export function ShelfApp() {
   const counts = tally(items);
   const binaryError = pathError(settings.binary);
   const folderError = pathError(settings.outputDir);
-  const catalog = useMemo(() => {
-    const seen = new Set(submissions.map((reel) => reel.shortcode));
-    return [...submissions, ...REEL_INDEX.filter((reel) => !seen.has(reel.shortcode))];
-  }, [submissions]);
-  const hits = useMemo(
-    () => (wordsOf(query).length === 0 ? [] : searchCatalog(catalog, query, 12)),
-    [catalog, query],
-  );
-  const shown = wordsOf(query).length === 0 ? (randomHits ?? []) : hits;
   const filtered = useMemo(
     () =>
       items.filter(
@@ -210,64 +174,6 @@ export function ShelfApp() {
       ),
     );
     return true;
-  }
-
-  function addCatalog(reels: readonly ReelRecord[]) {
-    if (reels.length === 0) {
-      setNotice("No reels match that word.");
-      return;
-    }
-    const room = Math.max(LIBRARY_LIMIT - items.length, 0);
-    const accepted = reels.slice(0, room);
-    const merged = mergeLinks(
-      items,
-      accepted.map((reel) => ({ ...reel, kind: "reel" as const })),
-    );
-    setItems(merged.items.slice(0, LIBRARY_LIMIT));
-    setKind("all");
-    if (merged.added === 0) {
-      setNotice("Those reels are already in the library.");
-      return;
-    }
-    setNotice(merged.added === 1 ? "Added 1 reel." : `Added ${merged.added} reels.`);
-  }
-
-  function findReels() {
-    if (wordsOf(query).length === 0) {
-      setRandomHits(pickRandom(catalog, 12));
-      setNotice("12 reels picked at random from the index.");
-      return;
-    }
-    setRandomHits(null);
-    const found = searchCatalog(catalog, query, 12);
-    setNotice(found.length === 0 ? "No reels match that word." : `${found.length} reels match that word.`);
-  }
-
-  function submitReel() {
-    const reel = sanitizeReel(
-      {
-        url: draftUrl,
-        title: draftTitle,
-        author: draftAuthor,
-        description: draftDescription,
-        tags: draftTags.split(","),
-        source: "submission",
-      },
-      "submission",
-    );
-    if (!reel) {
-      setNotice("Use one Instagram Reel link.");
-      return;
-    }
-    setSubmissions(saveSubmission(reel));
-    const merged = mergeLinks(items, [{ ...reel, kind: "reel", author: draftAuthor.trim(), collection: collection.trim() }]);
-    setItems(merged.items.slice(0, LIBRARY_LIMIT));
-    setDraftUrl("");
-    setDraftTitle("");
-    setDraftTags("");
-    setDraftDescription("");
-    setDraftAuthor("");
-    setNotice("Saved your reel in this browser. It is included in search.");
   }
 
   function saveToDownloads() {
@@ -381,8 +287,6 @@ export function ShelfApp() {
     ingest(text);
   }
 
-  const session = sessionOf(settings.cookies);
-
   const summary =
     items.length === 0
       ? "No items yet."
@@ -458,28 +362,7 @@ export function ShelfApp() {
           />
         </label>
 
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <fieldset>
-            <legend className="mb-1 text-sm font-medium text-ink">Login</legend>
-            <div className="grid grid-cols-3 gap-1 rounded-lg bg-chip p-1">
-              {SESSIONS.map((value) => (
-                <button
-                  key={value}
-                  type="button"
-                  aria-pressed={session === value}
-                  onClick={() => patch({ cookies: value })}
-                  className={
-                    session === value
-                      ? "h-11 rounded-md bg-surface text-sm font-medium text-ink"
-                      : "h-11 rounded-md text-sm font-medium text-muted"
-                  }
-                >
-                  {SESSION_LABEL[value]}
-                </button>
-              ))}
-            </div>
-          </fieldset>
-
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <fieldset>
             <legend className="mb-1 text-sm font-medium text-ink">Duplicates</legend>
             <div className="grid grid-cols-2 gap-1 rounded-lg bg-chip p-1">
@@ -584,7 +467,7 @@ export function ShelfApp() {
         </div>
         <p className="text-sm text-pretty text-muted">
           {result.ok
-            ? `Saved as shelf-instagram.sh in Downloads. Open Terminal and follow the numbered steps at the top of that file. ${settings.cookies === "none" ? "No browser login." : `Uses ${BROWSER_LABEL[settings.cookies]} on this Mac.`}`
+            ? "Saved as shelf-instagram.sh in Downloads. It does not read Safari, Firefox, or Chrome. Private posts will not download."
             : "Add a link before saving the file."}
         </p>
       </section>
@@ -599,25 +482,15 @@ export function ShelfApp() {
         </div>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
           <label className="relative block min-w-0 flex-1">
-            <span className="sr-only">Search reels by keyword</span>
+            <span className="sr-only">Search your library</span>
             <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted" />
             <input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") {
-                  event.preventDefault();
-                  findReels();
-                }
-              }}
-              placeholder="Search reels by keyword"
+              placeholder="Search your library"
               className={`${fieldClass} pl-10`}
             />
           </label>
-          <button type="button" className={secondaryButton} onClick={findReels}>
-            <Search className="size-4" aria-hidden="true" />
-            Find reels
-          </button>
           <div className="flex flex-wrap gap-1 rounded-lg bg-chip p-1">
             {filters.map((filter) => (
               <button
@@ -662,66 +535,6 @@ export function ShelfApp() {
           </select>
         </div>
 
-        {shown.length > 0 ? (
-          <div className="flex flex-col gap-2">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <p className="text-sm text-muted">
-                {shown.length} {shown.length === 1 ? "reel" : "reels"} from the index
-              </p>
-              <button type="button" className={secondaryButton} onClick={() => addCatalog(shown)}>
-                <Plus className="size-4" aria-hidden="true" />
-                Add matches
-              </button>
-            </div>
-            <ul className="grid gap-2">
-              {shown.map((reel) => (
-                <li key={reel.shortcode} className="flex flex-col gap-2 rounded-lg border border-line bg-field p-3 sm:flex-row sm:items-start">
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-pretty text-ink">{reel.title}</p>
-                    <p className="mt-1 line-clamp-2 text-sm text-pretty text-muted">{reel.description}</p>
-                    {reel.tags.length > 0 ? (
-                      <p className="mt-1 text-xs text-muted">{reel.tags.slice(0, 5).map((tag) => `#${tag}`).join(" ")}</p>
-                    ) : null}
-                  </div>
-                  <button type="button" className={secondaryButton} onClick={() => addCatalog([reel])}>
-                    <Plus className="size-4" aria-hidden="true" />
-                    Add
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </div>
-        ) : null}
-
-        <details className="rounded-lg border border-line px-3">
-          <summary className="flex min-h-11 cursor-pointer items-center text-sm font-medium text-ink">Submit a reel</summary>
-          <div className="grid gap-3 pb-3">
-            <label className="block">
-              <span className="mb-1 block text-sm font-medium text-ink">Reel link</span>
-              <input value={draftUrl} onChange={(event) => setDraftUrl(event.target.value)} placeholder="https://www.instagram.com/reel/…" spellCheck={false} className={fieldClass} />
-            </label>
-            <label className="block">
-              <span className="mb-1 block text-sm font-medium text-ink">Title</span>
-              <input value={draftTitle} onChange={(event) => setDraftTitle(event.target.value)} className={fieldClass} />
-            </label>
-            <label className="block">
-              <span className="mb-1 block text-sm font-medium text-ink">Tags</span>
-              <input value={draftTags} onChange={(event) => setDraftTags(event.target.value)} placeholder="travel, music" className={fieldClass} />
-            </label>
-            <label className="block">
-              <span className="mb-1 block text-sm font-medium text-ink">Author</span>
-              <input value={draftAuthor} onChange={(event) => setDraftAuthor(event.target.value)} className={fieldClass} />
-            </label>
-            <label className="block">
-              <span className="mb-1 block text-sm font-medium text-ink">Description</span>
-              <input value={draftDescription} onChange={(event) => setDraftDescription(event.target.value)} className={fieldClass} />
-            </label>
-            <button type="button" className={`${secondaryButton} w-full sm:w-auto`} onClick={submitReel}>
-              Save to index
-            </button>
-          </div>
-        </details>
-
         <div className="flex flex-wrap items-center justify-between gap-1">
           <p className="min-h-11 px-1 py-2 text-sm text-pretty text-muted tabular-nums" role="status">
             {notice ?? summary}
@@ -741,7 +554,7 @@ export function ShelfApp() {
 
         {items.length === 0 ? (
           <p className="panel px-5 py-12 text-sm text-pretty text-muted">
-            Nothing here yet. Paste a link, search the index, or submit a reel.
+            Nothing here yet. Paste a link above. Search covers titles, tags, and notes you keep.
           </p>
         ) : filtered.length === 0 ? (
           <p className="panel px-5 py-12 text-sm text-pretty text-muted">No results for that search.</p>
@@ -802,7 +615,7 @@ export function ShelfApp() {
           <div className="mb-3">
             <h2 className="font-display text-xl font-medium">Optional Terminal file</h2>
             <p className="text-sm text-pretty text-well-muted">
-              This page is the product. It cannot write videos into a folder by itself. Safari cannot give a website a folder, and Shelf does not ask Firefox for one either. The file below is optional. It runs only if you paste it into Terminal.
+              This page is the product. It cannot write videos into a folder by itself, and it does not read browser cookies. The file below is optional. It runs only if you paste it into Terminal. Private posts will not download.
             </p>
             <ol className="mt-3 list-decimal space-y-1 pl-5 text-sm text-pretty text-well-muted">
               <li>Checks that yt-dlp is in Downloads.</li>
@@ -992,7 +805,7 @@ export function ShelfApp() {
         <details className="panel px-4" open>
           <summary className="flex min-h-11 cursor-pointer items-center text-sm font-medium">Privacy</summary>
           <p className="pb-4 text-sm text-pretty text-muted">
-            Shelf has no account and no server. Your library stays in this browser. The optional Terminal file uses the Instagram login already open in Safari or Firefox, and that login stays there. Nothing is uploaded, and saved videos are not shared.
+            Shelf has no account and no server. Your library stays in this browser. The optional Terminal file does not read Safari, Chrome, or Firefox cookies. Private posts will not download. Nothing is uploaded, and saved videos are not shared.
           </p>
         </details>
         <details className="panel px-4">
@@ -1004,7 +817,7 @@ export function ShelfApp() {
         <details className="panel px-4">
           <summary className="flex min-h-11 cursor-pointer items-center text-sm font-medium">Where files go</summary>
           <p className="pb-4 text-sm text-pretty text-muted">
-            This page saves shelf-instagram.sh to your Downloads folder. If you run it, videos go to Downloads/Instagram-Reels, with shelf-index.json beside them. Requires macOS 12 or later. If a post fails, Terminal says it may be private, deleted, or changed. Mark that item Failed in the library.
+            This page saves shelf-instagram.sh to your Downloads folder. If you run it, videos go to Downloads/Instagram-Reels, with shelf-index.json beside them. Requires macOS 12 or later. The file does not read browser cookies. If a post fails, Terminal says it may be private, deleted, or changed. Mark that item Failed in the library. On a Mac, the mac folder can build Shelf.app, which opens this same page in its own window. That app is not signed or notarized.
           </p>
         </details>
       </section>
