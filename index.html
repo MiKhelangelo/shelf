@@ -18,13 +18,13 @@
 <a class="skip-link" href="#main">Skip to library</a>
 <div class="app-shell">
   <aside class="sidebar" aria-label="Library navigation">
-    <a class="brand" href="./" aria-label="Shelf home"><span class="brand-mark" aria-hidden="true">S</span><span>Shelf<span class="brand-sub">Links stay in this browser</span></span></a>
+    <a class="brand" href="./" aria-label="Shelf home"><span class="brand-mark" aria-hidden="true">S</span><span>Shelf<span class="brand-sub">A place for your finds</span></span></a>
     <p class="nav-label">YOUR LIBRARY</p>
     <nav id="navigation" class="navigation">
       <button class="nav-item active" data-filter="all" aria-current="page"><span aria-hidden="true" class="nav-icon">▦</span>All items<span class="count" id="count-all">0</span></button>
-      <button class="nav-item" data-filter="todo"><span aria-hidden="true" class="nav-icon">▤</span>Not saved<span class="count" id="count-todo">0</span></button>
-      <button class="nav-item" data-filter="saved"><span aria-hidden="true" class="nav-icon">✓</span>Found in folder<span class="count" id="count-saved">0</span></button>
-      <button class="nav-item" data-filter="failed"><span aria-hidden="true" class="nav-icon">!</span>Failed<span class="count" id="count-failed">0</span></button>
+      <button class="nav-item" data-filter="todo"><span aria-hidden="true" class="nav-icon">▤</span>To save<span class="count" id="count-todo">0</span></button>
+      <button class="nav-item" data-filter="saved"><span aria-hidden="true" class="nav-icon">✓</span>Indexed<span class="count" id="count-saved">0</span></button>
+      <button class="nav-item" data-filter="failed"><span aria-hidden="true" class="nav-icon">!</span>Needs attention<span class="count" id="count-failed">0</span></button>
     </nav>
     <div class="sidebar-bottom">
       <button class="sidebar-help" id="help">How Shelf works <span aria-hidden="true">?</span></button>
@@ -35,20 +35,13 @@
   <div class="workspace">
     <header class="topbar"><span class="breadcrumb">Workspace <span aria-hidden="true">/</span> Library</span><span class="privacy-badge">Stored in your browser</span></header>
     <main id="main">
-      <div class="page-heading"><div><p class="eyebrow">On your Mac</p><h1 id="view-title">This page keeps your links<span class="title-dot">.</span></h1><p class="intro">Videos are saved only if you run the script on your Mac. Nothing is uploaded.</p></div><button class="button secondary" id="index"><span aria-hidden="true">▱</span> Open saved folder</button></div>
+      <div class="page-heading"><div><p class="eyebrow">COLLECT. KEEP. FIND AGAIN.</p><h1 id="view-title">Your library<span class="title-dot">.</span></h1><p class="intro">Good finds deserve a place to stay.</p></div><button class="button secondary" id="index"><span aria-hidden="true">▱</span> Open saved folder</button></div>
       <div id="storage-warning" class="notice warning" role="status" hidden></div>
       <section class="composer" aria-labelledby="add-title">
-        <div class="composer-top"><h2 id="add-title">Paste links</h2><span class="small-label">INSTAGRAM POSTS &amp; REELS</span></div>
+        <div class="composer-top"><h2 id="add-title">Make room for your next find</h2><span class="small-label">INSTAGRAM POSTS &amp; REELS</span></div>
         <label class="sr-only" for="paste">Instagram links to add</label>
         <textarea id="paste" rows="2" placeholder="Paste Instagram links here, one or many…" aria-describedby="paste-hint"></textarea>
-        <div class="composer-bottom"><p id="paste-hint">Paste post or Reel links. Duplicates are skipped. New links are selected, so you can save them right away.<span class="shortcut">⌘ / Ctrl + Enter to add</span></p><div class="composer-actions"><button class="button primary" id="add"><span aria-hidden="true">+</span> Add to library</button><button class="button secondary" id="script" disabled><span aria-hidden="true">↓</span> Get save script</button></div></div>
-        <div class="terminal-steps">
-          <p>When <code>shelf-instagram.sh</code> is in Downloads, run these three lines in Terminal:</p>
-          <pre id="terminal-lines">brew install yt-dlp
-cd ~/Downloads
-bash shelf-instagram.sh</pre>
-          <button class="button secondary" type="button" id="copy-lines">Copy lines</button>
-        </div>
+        <div class="composer-bottom"><p id="paste-hint">Paste post or Reel links. Duplicates are skipped.<span class="shortcut">⌘ / Ctrl + Enter to add</span></p><button class="button primary" id="add"><span aria-hidden="true">+</span> Add to library</button></div>
         <p id="addmsg" class="inline-status" role="status"></p>
       </section>
       <div class="workflow-note"><span class="info-icon" aria-hidden="true">i</span><p>Shelf organizes links and local files. To save videos, <button class="text-button" id="workflow-help">export a script and run it on your Mac</button>, then open the saved folder here.</p></div>
@@ -59,17 +52,16 @@ bash shelf-instagram.sh</pre>
           <label class="sr-only" for="kind">Filter by post type</label><select id="kind"><option value="all">All types</option><option value="reel">Reels</option><option value="post">Posts</option><option value="tv">TV</option></select>
           <label class="sr-only" for="sort">Sort library</label><select id="sort"><option value="newest">Newest added</option><option value="oldest">Oldest added</option><option value="author">Creator A–Z</option></select>
         </div>
-        <div class="selection-bar"><button class="text-button" id="all">Select matching</button><span id="selected-count">0 selected</span><button class="button primary compact" id="script-bar" disabled><span aria-hidden="true">↓</span> Get save script</button></div>
+        <div class="selection-bar"><button class="text-button" id="all">Select matching</button><span id="selected-count">0 selected</span><button class="button primary compact" id="script" disabled><span aria-hidden="true">↓</span> Get save script</button></div>
         <p id="idxmsg" class="index-status" role="status"></p>
         <div id="folder-note" class="folder-note" hidden></div>
         <ul id="list" class="item-grid" aria-label="Library items"></ul>
         <div id="empty" class="empty-state">
-          <div class="empty-mark" aria-hidden="true">▤</div><h3>No links yet.</h3><p>Paste an Instagram post or Reel above. Then get the save script and run it on your Mac.</p><button class="button secondary" id="empty-add">Add your first link</button>
+          <div class="empty-mark" aria-hidden="true">▤</div><h3>A little space for what inspires you.</h3><p>Your first find starts with a link.<br>Paste an Instagram post or Reel above, or open a folder you already saved.</p><button class="button secondary" id="empty-add">Add your first link</button>
           <div class="empty-flow"><span><b>01</b> Collect links</span><span><b>02</b> Save with a script</span><span><b>03</b> Open &amp; explore</span></div>
         </div>
-        <div id="no-results" class="empty-state small-empty" hidden><h3>Nothing matches.</h3><p>Try a different search, or show every item.</p><button id="reset" class="button secondary">Reset filters</button></div>
+        <div id="no-results" class="empty-state small-empty" hidden><h3>No finds match just yet.</h3><p>Try a different search or show all your items.</p><button id="reset" class="button secondary">Reset filters</button></div>
         <button id="more" class="button secondary show-more" hidden>Show more</button>
-        <p id="reconnect-note" class="reconnect-note" hidden>Reopen the saved folder after you reload. The browser forgets the files.</p>
       </section>
       <footer><span>Shelf is an independent project, unaffiliated with Instagram or Meta.</span><span>Save content you have permission to keep. Saving isn’t permission to repost.</span></footer>
     </main>
@@ -93,7 +85,7 @@ bash shelf-instagram.sh</pre>
   <p class="privacy-detail">The page sends no library or file data to a service. The host still receives normal page requests. Browser storage can be cleared; a JSON export backs up links and metadata, not your videos.</p>
 </dialog>
 <dialog id="editor" aria-labelledby="editor-title"><form id="edit-form">
-  <div class="dialog-heading"><h2 id="editor-title">Title and notes</h2><button class="icon-button" type="button" data-close="editor" aria-label="Close editor">×</button></div>
+  <div class="dialog-heading"><h2 id="editor-title">A note for this find</h2><button class="icon-button" type="button" data-close="editor" aria-label="Close editor">×</button></div>
   <label for="edit-title">Your title</label><input id="edit-title" maxlength="240" placeholder="Give this find a name">
   <label for="edit-note">Notes &amp; tags</label><textarea id="edit-note" maxlength="1000" rows="5" placeholder="Why you saved it, ideas, #tags…"></textarea>
   <p class="muted">Your title and notes are searchable and stay separate from the original caption.</p>

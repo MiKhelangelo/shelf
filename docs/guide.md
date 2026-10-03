@@ -7,14 +7,12 @@ Shelf is a static web app for keeping Instagram links and searching your own vid
 ## The workflow
 
 1. Paste Instagram post or Reel links. Duplicate shortcodes are skipped. Add your own title, notes, and hashtags immediately.
-2. Select the links you want and choose **Get save script**, next to **Add to library**. Review the generated source in **How Shelf works** before running it.
+2. Select the links you want and choose **Get save script**. Review the generated source in **How Shelf works** before running it.
 3. Install [yt-dlp](https://github.com/yt-dlp/yt-dlp/wiki/Installation). If you already use Homebrew: `brew install yt-dlp`.
 4. Assuming your script is in Downloads, run:
 
    ```bash
-   brew install yt-dlp
-   cd ~/Downloads
-   bash shelf-instagram.sh
+   cd ~/Downloads && bash shelf-instagram.sh
    ```
 
 5. Files and `.info.json` sidecars go into `~/Movies/Shelf/<shortcode>/`. Return to the page, choose **Open saved folder**, and select `Shelf`.
@@ -24,10 +22,10 @@ You can use the link library without the script. Script batches support 1–500 
 
 ## Honest statuses and limits
 
-- **Not saved:** a link is in the library; no local media has been found in a folder you opened.
-- **Found in folder:** you selected a nonempty local video in a recognized shortcode folder. This is evidence of a file, not proof that the entire post downloaded or that the file can be decoded.
-- **Failed:** a `shelf-failed.txt` entry exists. Partial files can still be playable, but the post remains eligible for retry.
-- A separate **connected** message means the file is accessible in the current tab. Captions can remain after a reload; file access does not. Reopen the folder to play the videos.
+- **To save:** a link is in the library; no local media has been indexed.
+- **Indexed:** the user selected a nonempty local video in a recognized shortcode folder. This is evidence of a file, not proof that the entire post downloaded or that the file can be decoded.
+- **Needs attention:** a `shelf-failed.txt` entry exists. Partial files can still be playable, but the post remains eligible for retry.
+- A separate **connected** message means the file is accessible in the current tab. Indexed metadata persists; file access does not.
 - Instagram may require login or block public requests. Private, removed, login-required, and some photo-only posts cannot be saved by this workflow. Shelf does not bypass those restrictions.
 - Script creation does not change save status. The page cannot run the script, watch folders, or infer Terminal results.
 - Playback depends on browser codecs. Supported file extensions are MP4, MOV, M4V, WebM, and MKV; unsupported codecs should be opened in a local player.
