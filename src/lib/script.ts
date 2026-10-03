@@ -1,6 +1,3 @@
-import type { Item } from "./instagram.ts";
-import type { Settings } from "./settings.ts";
-
 export type GenerateResult =
   | { ok: true; script: string; urlCount: number }
   | { ok: false; error: string };
@@ -71,9 +68,7 @@ printf 'No videos were downloaded.\\n'
 printf 'To open it later: cd %s\\n' "$dest"
 `;
 
-export function generateScript(items: readonly Item[], settings: Settings): GenerateResult {
-  void items;
-  void settings;
+export function generateScript(): GenerateResult {
   if (APP_SCRIPT.includes("yt-dlp") || APP_SCRIPT.includes("instagram.com")) {
     return { ok: false, error: "The app download file is not safe." };
   }

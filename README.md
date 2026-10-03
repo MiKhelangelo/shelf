@@ -8,10 +8,8 @@ Live app: [mikhelangelo.github.io/shelf](https://mikhelangelo.github.io/shelf/).
 
 ## Run the file
 
-The file already in Downloads is the old one. It still contains `www.instagram.com/reel/DcJDWQhuc0P` and will download that Reel. Replace it first.
-
 1. Open **Terminal**. Press the Command key and the space bar, type `Terminal`, then press Return.
-2. Paste this line and press Return. This replaces the old file. It does not download a Reel.
+2. Paste this line and press Return. This gets the current file.
 
 ```bash
 curl -fsSL -o ~/Downloads/shelf-instagram.sh https://raw.githubusercontent.com/MiKhelangelo/shelf/main/shelf-instagram.sh
@@ -40,8 +38,6 @@ chmod +x shelf-instagram.sh
 If the Mac says it cannot open the file, go to **System Settings**, then **Privacy & Security**, and press **Open Anyway**.
 
 ## Open the downloaded app
-
-The file is the Shelf project, not a video.
 
 1. Download Node.js from [nodejs.org](https://nodejs.org). Press the big download button and install it.
 2. Open **Terminal**.
