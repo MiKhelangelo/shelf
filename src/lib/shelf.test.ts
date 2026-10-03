@@ -4,7 +4,7 @@ import { chmodSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
-import { capIncoming, extractInstagramUrls, mergeLinks, parseInstagramUrl } from "./instagram.ts";
+import { capIncoming, extractInstagramUrls, mergeLinks, parseInstagramUrl, reelsForKeyword } from "./instagram.ts";
 import { generateScript } from "./script.ts";
 import { seedItems, SEED_URLS } from "./seed.ts";
 import { defaultSettings, type Settings } from "./settings.ts";
@@ -272,6 +272,37 @@ exit 0
   const failed = readFileSync(join(home, "Instagram-Reels", "shelf-failed.txt"), "utf8");
   assert.match(failed, /Dd3tsoHmHuH/);
   assert.doesNotMatch(failed, /Ddqg_NAmSJ1/);
+});
+
+test("a keyword becomes a tag search of at most 15 reels", () => {
+  const found = reelsForKeyword("Travel, travel! pasta");
+  assert.deepEqual(
+    found.map((item) => item.shortcode),
+    ["tag:travel", "tag:pasta"],
+  );
+  assert.deepEqual(
+    reelsForKeyword("a ../etc").map((item) => item.shortcode),
+    ["tag:etc"],
+  );
+  assert.equal(reelsForKeyword("..").length, 0);
+  assert.equal(parseInstagramUrl(found[0]!.url)?.url, found[0]!.url);
+
+  const result = generateScript(
+    found.map((item) => ({ ...item, selected: true })),
+    { ...defaultSettings, concurrency: 1, pauseSeconds: 0 },
+  );
+  assert.equal(result.ok, true);
+  if (!result.ok) return;
+  assert.match(result.script, /explore\/tags\/travel/);
+  assert.match(result.script, /--playlist-end 15/);
+  assert.match(result.script, /--yes-playlist/);
+  assert.equal(bashOk(result.script), true);
+
+  const hostile = generateScript(
+    [{ ...found[0]!, url: "https://www.instagram.com/explore/tags/travel/;rm/", selected: true }],
+    defaultSettings,
+  );
+  assert.equal(hostile.ok, false);
 });
 
 function bashOk(script: string): boolean {

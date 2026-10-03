@@ -14,7 +14,8 @@ Your browser login stays in Safari or Firefox. Nothing is uploaded.
 
 ## Included
 
-- Search the library by code or link.
+- Search the library by a word, code, or link.
+- Find reels for a word. Each word saves up to 15 recent reels.
 - Skip items you already saved, or download them again.
 - Optional thumbnails before you download.
 - Several downloads at a time. If one fails, the rest continue.

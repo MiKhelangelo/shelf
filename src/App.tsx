@@ -8,7 +8,9 @@ import {
   LIBRARY_LIMIT,
   matchesQuery,
   mergeLinks,
+  reelsForKeyword,
   tally,
+  itemTitle,
   type Item,
   type Kind,
 } from "./lib/instagram";
@@ -170,6 +172,25 @@ export function ShelfApp() {
     return true;
   }
 
+  function findReels() {
+    const found = reelsForKeyword(query);
+    if (found.length === 0) {
+      setNotice("Use a word of at least 2 letters.");
+      return;
+    }
+    const room = Math.max(LIBRARY_LIMIT - items.length, 0);
+    const accepted = found.slice(0, room);
+    const merged = mergeLinks(items, accepted);
+    setItems(merged.items.slice(0, LIBRARY_LIMIT));
+    setKind("all");
+    const words = found.map((item) => itemTitle(item)).join(", ");
+    if (merged.added === 0) {
+      setNotice(`${words} is already in the library.`);
+      return;
+    }
+    setNotice(`Added a search for ${words}. Up to 15 recent reels for each word.`);
+  }
+
   function saveToDownloads() {
     if (!result.ok) return;
     const blob = new Blob([result.script], { type: "text/plain;charset=utf-8" });
@@ -269,6 +290,7 @@ export function ShelfApp() {
     { id: "post", label: "Posts" },
     { id: "reel", label: "Reels" },
     { id: "tv", label: "TV" },
+    { id: "search", label: "Searches" },
   ];
 
   return (
@@ -282,6 +304,7 @@ export function ShelfApp() {
         </div>
         <p className="text-sm text-muted tabular-nums">
           {counts.posts} posts · {counts.reels} reels
+          {counts.searches > 0 ? ` · ${counts.searches} ${counts.searches === 1 ? "search" : "searches"}` : ""}
         </p>
       </header>
 
@@ -429,15 +452,25 @@ export function ShelfApp() {
         <h2 className="font-display text-2xl font-medium text-ink">Library</h2>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
           <label className="relative block min-w-0 flex-1">
-            <span className="sr-only">Search the library</span>
+            <span className="sr-only">Search reels by keyword</span>
             <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted" />
             <input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search by code or link"
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  findReels();
+                }
+              }}
+              placeholder="Search reels by keyword"
               className={`${fieldClass} pl-10`}
             />
           </label>
+          <button type="button" className={secondaryButton} onClick={findReels}>
+            <Search className="size-4" aria-hidden="true" />
+            Find reels
+          </button>
           <div className="flex flex-wrap gap-1 rounded-lg bg-chip p-1">
             {filters.map((filter) => (
               <button
@@ -476,7 +509,7 @@ export function ShelfApp() {
 
         {items.length === 0 ? (
           <p className="panel px-5 py-12 text-sm text-pretty text-muted">
-            Nothing here yet. Add a post or Reel above. Stories and profile links are not included.
+            Nothing here yet. Paste a link, or search reels by a word.
           </p>
         ) : filtered.length === 0 ? (
           <p className="panel px-5 py-12 text-sm text-pretty text-muted">No results for that search.</p>
@@ -490,18 +523,18 @@ export function ShelfApp() {
                     type="checkbox"
                     checked={item.selected}
                     onChange={() => toggle(item.shortcode)}
-                    aria-label={`Include ${kindLabel(item.kind)} ${item.shortcode}`}
+                    aria-label={`Include ${kindLabel(item.kind)} ${itemTitle(item)}`}
                     className="size-4 shrink-0 accent-ink"
                   />
                   <div className="min-w-0 flex-1 py-2">
                     <p className="text-xs font-medium tracking-widest text-muted uppercase">{kindLabel(item.kind)}</p>
-                    <p className="truncate font-mono text-sm text-ink">{item.shortcode}</p>
+                    <p className="truncate font-mono text-sm text-ink">{itemTitle(item)}</p>
                   </div>
                   <button
                     type="button"
                     className="grid size-11 shrink-0 place-items-center rounded-lg text-muted hover:text-ink"
                     onClick={() => remove(item.shortcode)}
-                    aria-label={`Remove ${item.shortcode}`}
+                    aria-label={`Remove ${itemTitle(item)}`}
                   >
                     <X className="size-4" aria-hidden="true" />
                   </button>
@@ -694,7 +727,7 @@ export function ShelfApp() {
 
 function Cover({ item, show }: { item: Item; show: boolean }) {
   const [broken, setBroken] = useState(false);
-  if (show && !broken) {
+  if (show && item.kind !== "search" && !broken) {
     return (
       <img
         src={`${item.url}media/?size=m`}
@@ -710,7 +743,7 @@ function Cover({ item, show }: { item: Item; show: boolean }) {
   return (
     <div className="flex aspect-3/4 w-full flex-col justify-between bg-well p-3">
       <span className="text-xs font-medium tracking-widest text-well-muted uppercase">{kindLabel(item.kind)}</span>
-      <span className="font-display text-xl leading-tight break-all text-well-fg">{item.shortcode}</span>
+      <span className="font-display text-xl leading-tight break-all text-well-fg">{itemTitle(item)}</span>
     </div>
   );
 }

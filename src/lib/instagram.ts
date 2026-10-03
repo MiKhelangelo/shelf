@@ -1,4 +1,4 @@
-export type Kind = "post" | "reel" | "tv";
+export type Kind = "post" | "reel" | "tv" | "search";
 
 export type ParsedLink = {
   url: string;
@@ -78,7 +78,19 @@ export function parseInstagramUrl(raw: string): ParsedLink | null {
     }
   }
 
-  if (!kind || !shortcode) return null;
+  if (!kind || !shortcode) {
+    if (parts[0] === "explore" && parts[1] === "tags") {
+      const tag = (parts[2] ?? "").toLowerCase();
+      if (/^[a-z0-9_]{2,50}$/.test(tag)) {
+        return {
+          kind: "search",
+          shortcode: `tag:${tag}`,
+          url: `https://www.instagram.com/explore/tags/${tag}/`,
+        };
+      }
+    }
+    return null;
+  }
 
   return {
     kind,
@@ -133,11 +145,28 @@ export function capIncoming(links: readonly ParsedLink[]): { links: ParsedLink[]
   return { links: links.slice(0, PASTE_LIMIT), overflow: links.length - PASTE_LIMIT };
 }
 
+export function reelsForKeyword(raw: string): ParsedLink[] {
+  const words = scrubText(raw)
+    .toLowerCase()
+    .split(/[^a-z0-9_]+/)
+    .filter((word) => /^[a-z0-9_]{2,50}$/.test(word));
+  return [...new Set(words)].slice(0, 5).map((word) => ({
+    kind: "search" as const,
+    shortcode: `tag:${word}`,
+    url: `https://www.instagram.com/explore/tags/${word}/`,
+  }));
+}
+
+export function itemTitle(item: Pick<Item, "kind" | "shortcode">): string {
+  return item.kind === "search" ? item.shortcode.slice(4) : item.shortcode;
+}
+
 export function matchesQuery(item: Item, query: string): boolean {
   const needle = query.trim().toLowerCase();
   if (!needle) return true;
   return (
     item.shortcode.toLowerCase().includes(needle) ||
+    itemTitle(item).includes(needle) ||
     item.url.toLowerCase().includes(needle) ||
     item.kind.includes(needle)
   );
@@ -169,23 +198,27 @@ export function tally(items: readonly Item[]): {
   posts: number;
   reels: number;
   tvs: number;
+  searches: number;
   selected: number;
 } {
   let posts = 0;
   let reels = 0;
   let tvs = 0;
+  let searches = 0;
   let selected = 0;
   for (const item of items) {
     if (item.kind === "post") posts += 1;
     else if (item.kind === "reel") reels += 1;
-    else tvs += 1;
+    else if (item.kind === "tv") tvs += 1;
+    else searches += 1;
     if (item.selected) selected += 1;
   }
-  return { posts, reels, tvs, selected };
+  return { posts, reels, tvs, searches, selected };
 }
 
 export function kindLabel(kind: Kind): string {
   if (kind === "post") return "Post";
   if (kind === "reel") return "Reel";
+  if (kind === "search") return "Search";
   return "IGTV";
 }

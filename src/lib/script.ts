@@ -12,7 +12,8 @@ export type GenerateResult =
   | { ok: true; script: string; urlCount: number }
   | { ok: false; error: string };
 
-const CANONICAL = /^https:\/\/www\.instagram\.com\/(?:p|reel|tv)\/[A-Za-z0-9_-]{5,20}\/$/;
+const CANONICAL =
+  /^https:\/\/www\.instagram\.com\/(?:(?:p|reel|tv)\/[A-Za-z0-9_-]{5,20}|explore\/tags\/[a-z0-9_]{2,50})\/$/;
 const MAX_LINKS = 500;
 
 const QUOTABLE = /^[A-Za-z0-9._:/+=%*()\[\] -]+$/;
@@ -48,7 +49,7 @@ export function generateScript(items: readonly Item[], settings: Settings): Gene
   for (const item of selected) {
     const parsed = parseInstagramUrl(item.url);
     if (!parsed || parsed.url !== item.url || !CANONICAL.test(item.url)) {
-      return { ok: false, error: "One of these links is not a post or Reel." };
+      return { ok: false, error: "One of these links is not a post, Reel, or word search." };
     }
     urls.push(parsed.url);
   }
@@ -111,6 +112,9 @@ function render(urls: readonly string[], settings: Settings): string {
   if (settings.fullCarousel) {
     lines.push("# A post with many photos saves every photo.");
   }
+  if (urls.some((url) => url.includes("/explore/tags/"))) {
+    lines.push("# A word search saves up to 15 recent reels for that word.");
+  }
 
   lines.push("# Made for the Mac.");
   lines.push("# New files stay private. The downloader will not update itself.");
@@ -142,7 +146,7 @@ function render(urls: readonly string[], settings: Settings): string {
   lines.push("");
   lines.push('for url in "${urls[@]}"; do');
   lines.push(
-    "  if [[ ! \"$url\" =~ ^https://www\\.instagram\\.com/(p|reel|tv)/[A-Za-z0-9_-]{5,20}/$ ]]; then",
+    "  if [[ ! \"$url\" =~ ^https://www\\.instagram\\.com/((p|reel|tv)/[A-Za-z0-9_-]{5,20}|explore/tags/[a-z0-9_]{2,50})/$ ]]; then",
   );
   lines.push("    printf 'Refusing an unexpected link: %s\\n' \"$url\" >&2");
   lines.push("    exit 2");
@@ -153,6 +157,10 @@ function render(urls: readonly string[], settings: Settings): string {
   for (const line of argLines(settings)) lines.push(`  ${line}`);
   lines.push(")");
   lines.push("");
+  if (urls.some((url) => url.includes("/explore/tags/"))) {
+    lines.push("args+=(--playlist-end 15 --yes-playlist)");
+    lines.push("");
+  }
 
   if (settings.mode === "batch") {
     lines.push("printf 'Downloading %s links into %s\\n' \"${#urls[@]}\" \"$out\"");
