@@ -74,7 +74,13 @@ function render(urls: readonly string[], settings: Settings): string {
   const lines: string[] = [
     "#!/usr/bin/env bash",
     "# Shelf. Paste a link. Keep the video.",
-    "# On your Mac: chmod +x shelf-instagram.sh && ./shelf-instagram.sh",
+    "# How to run this file:",
+    "# 1. Put yt-dlp_macos in your Downloads folder.",
+    "# 2. Open Terminal.",
+    "# 3. Type: cd ~/Downloads",
+    "# 4. Type: chmod +x shelf-instagram.sh",
+    "# 5. Type: ./shelf-instagram.sh",
+    "# 6. The videos are saved in Downloads/Instagram-Reels.",
     `# ${urls.length} ${urls.length === 1 ? "link" : "links"}. Nothing here is sent away.`,
   ];
 

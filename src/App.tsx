@@ -420,7 +420,7 @@ export function ShelfApp() {
         </div>
         <p className="text-sm text-pretty text-muted">
           {result.ok
-            ? `The file is saved to Downloads. Open it to download the videos. ${settings.cookies === "none" ? "No browser login." : `Uses ${BROWSER_LABEL[settings.cookies]} on this Mac.`}`
+            ? `Saved as shelf-instagram.sh in Downloads. Open Terminal and follow the numbered steps at the top of that file. ${settings.cookies === "none" ? "No browser login." : `Uses ${BROWSER_LABEL[settings.cookies]} on this Mac.`}`
             : "Add a link before saving the file."}
         </p>
       </section>
