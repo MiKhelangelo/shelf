@@ -25,14 +25,15 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
-      - run: npm ci
-      - run: npm test
-      - run: npm run build
-        env:
-          GITHUB_PAGES: "1"
+      - run: node --test tests/lib.test.js
+      - name: Prepare static page
+        run: |
+          mkdir _site
+          cp index.html styles.css lib.js shelf-script.js app.js _site/
+          cp -R assets _site/assets
+          touch _site/.nojekyll
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: dist
+          path: _site
       - id: deployment
         uses: actions/deploy-pages@v4

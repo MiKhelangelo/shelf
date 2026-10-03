@@ -1,106 +1,79 @@
 # Shelf
 
-Saves posts and Reels you choose to your Mac. Everything stays on your computer.
+**Live app:** https://mikhelangelo.github.io/shelf/
 
-There is no Shelf account, no upload, and no Shelf server. Shelf does not sign in to Instagram and does not read Safari, Chrome, or Firefox cookies. Private posts will not download. Nothing you save is shared. Not affiliated with Instagram or Meta. Respect the creator’s rights and Instagram’s terms.
+Shelf is a static web app for keeping Instagram links and searching your own video library. The page is the product; an exported Bash script is optional when you want video files on your Mac. There is no Shelf backend, account, cloud storage, native installer, or automatic Instagram download in the browser.
 
-This repository is only the local app. It does not include accounts, a database, or a server.
+## The workflow
 
-The page is the product. macOS 12 or later. Save `shelf-instagram.sh` only if you want the video files. The page shows that file’s SHA-256 checksum and what each step does. The file always passes `--no-cookies`.
+1. Paste Instagram post or Reel links. Duplicate shortcodes are skipped. Add your own title, notes, and hashtags immediately.
+2. Select the links you want and choose **Get save script**. Review the generated source in **How Shelf works** before running it.
+3. Install [yt-dlp](https://github.com/yt-dlp/yt-dlp/wiki/Installation). If you already use Homebrew: `brew install yt-dlp`.
+4. Assuming your script is in Downloads, run:
 
-## Mac window
+   ```bash
+   cd ~/Downloads && bash shelf-instagram.sh
+   ```
 
-`mac/` is a small Swift window around the same page. It does not read browser cookies. It is not signed or notarized, so macOS may ask you to allow it.
+5. Files and `.info.json` sidecars go into `~/Movies/Shelf/<shortcode>/`. Return to the page, choose **Open saved folder**, and select `Shelf`.
+6. Search creators, captions, titles, notes, and hashtags. Play connected local videos. Reopen the folder after reloading; browsers do not retain access to those files.
 
-1. On a Mac, open Terminal in this folder.
-2. Run `bash mac/build.sh`.
-3. Open `mac/Shelf.app`.
+You can use the link library without the script. Script batches support 1–500 selected items. The library holds 2,000 items; additions above capacity are rejected without deleting existing records.
 
-There is no signed `.dmg`.
+## Honest statuses and limits
 
-Questions and takedown requests: [GitHub issues](https://github.com/MiKhelangelo/shelf/issues).
+- **To save:** a link is in the library; no local media has been indexed.
+- **Indexed:** the user selected a nonempty local video in a recognized shortcode folder. This is evidence of a file, not proof that the entire post downloaded or that the file can be decoded.
+- **Needs attention:** a `shelf-failed.txt` entry exists. Partial files can still be playable, but the post remains eligible for retry.
+- A separate **connected** message means the file is accessible in the current tab. Indexed metadata persists; file access does not.
+- Instagram may require login or block public requests. Private, removed, login-required, and some photo-only posts cannot be saved by this workflow. Shelf does not bypass those restrictions.
+- Script creation does not change save status. The page cannot run the script, watch folders, or infer Terminal results.
+- Playback depends on browser codecs. Supported file extensions are MP4, MOV, M4V, WebM, and MKV; unsupported codecs should be opened in a local player.
+- Multiple videos per shortcode are available through the player selector. Videos without metadata create basic Reel records inferred from the folder; no creator/caption or authoritative post type can be inferred from media alone.
+- Each metadata file is limited to 20 MB, with at most 5,000 metadata files read per folder selection. Captions are searchable up to 20,000 characters. Skips and capacity problems are reported.
 
-## Steps
+## Privacy and recovery
 
-1. Paste a post or Reel link.
-2. Choose **Save to Downloads**.
-3. Optional: copy the Terminal steps and run them. Videos go to `Downloads/Instagram-Reels`, with `shelf-index.json` beside them.
+Library data stays in `localStorage` on the current browser and origin. Selected files are read locally through browser APIs; no library or file data is uploaded. No analytics, third-party fonts, thumbnails, or Instagram embeds load. The host receives ordinary page requests. Opening an original link navigates to Instagram. The optional Terminal script makes network requests to Instagram and its media services through yt-dlp.
 
-## Included
+**Export library** creates a JSON backup of links and metadata, including notes. It does not include videos. **Import backup** merges validated new entries and preserves existing ones. Browser storage can be blocked, cleared, or exhausted; a persistent warning appears when saving fails. Corrupt or partly invalid stored data can be downloaded as a recovery copy before changes replace it.
 
-- Search your own library by title, tag, author, or note.
-- Grid and list views, collections, and a status for each item: Chosen, Saved, Failed, or Already have it.
-- Skip items you already saved, or download them again.
-- Optional thumbnails before you download.
-- If one video fails, the rest continue, and Terminal says the post may be private, deleted, or changed.
+The earlier GitHub Pages `shelf.v4` library is migrated on the same origin when no v5 library exists. Links and metadata are preserved, with notes, collections, and tags carried into searchable notes. Old manually assigned save statuses are reset until files are indexed. Unsupported search URLs are skipped visibly, and the original v4 key is retained for recovery. The ZIP's v5 array format remains supported. Browser libraries do not transfer automatically between browsers or hosting origins; use a backup.
 
-Stories and profile links are not included.
+## Script behavior
 
-## Get the downloader
+The audited template lives in `shelf-script.js`; URLs are validated again in Bash. It discovers yt-dlp on `PATH` or standard Mac locations, ignores user configuration and plugins, and imports no cookies or browser login. It processes one link at a time, verifies nonempty video and metadata output, skips completed pairs unless a prior failure requires a retry, and preserves unrelated failure history. New files use a private umask. There is no installer, quarantine override, shell evaluation of pasted text, or deletion of saved videos.
 
-Shelf needs a free program called yt-dlp. It is the part that saves the videos.
+The script chooses a directly available format rather than requiring an audio/video merge. Quality and codec vary with availability; video-only fallback may have no audio. A nonzero exit reports failed downloads, invalid links, missing yt-dlp, or file-operation errors. A lock prevents simultaneous Shelf scripts from writing the same folder. After an abnormal termination, verify no script is running before removing an abandoned `.shelf-download-lock` directory.
 
-1. Open the [yt-dlp download page](https://github.com/yt-dlp/yt-dlp/releases/latest).
-2. Find the file named `yt-dlp_macos`.
-3. Download that file.
-4. Move it into your **Downloads** folder.
-5. Leave the name as `yt-dlp_macos`. Do not add `.txt` or any other ending.
-
-## Run the file from Shelf
-
-1. In Shelf, press **Save to Downloads**.
-2. Open your **Downloads** folder. You should see `shelf-instagram.sh`.
-3. Open **Terminal**. Press the Command key and the space bar, type `Terminal`, then press Return.
-4. Type the line below, then press Return. This opens the Downloads folder inside Terminal.
+Optional overrides use environment variables:
 
 ```bash
-cd ~/Downloads
+SHELF_OUT="$HOME/Movies/My Shelf" SHELF_PAUSE=3 bash shelf-instagram.sh
 ```
 
-5. Type the next line, then press Return. This lets the Mac run the file.
+## Run and verify
+
+No frontend build or package installation is needed. Serve this folder locally:
 
 ```bash
-chmod +x shelf-instagram.sh
+python3 -m http.server 4173 --bind 127.0.0.1
 ```
 
-6. Type the next line, then press Return. This starts the download.
+Open http://127.0.0.1:4173. A local server gives a stable storage origin; opening `index.html` directly may have browser-specific storage behavior.
+
+Tests require Node.js 18+:
 
 ```bash
-./shelf-instagram.sh
+node --test tests/lib.test.js
 ```
 
-7. Wait until Terminal stops printing new lines.
-8. Open **Downloads**, then open the folder **Instagram-Reels**. The videos are in there.
+Tests cover URL/shell injection validation, metadata sanitization, legacy migration, browser module exports, and actual Bash execution against a fake yt-dlp for success, partial failure, empty output, retries, lock handling, and preserved failure history. These checks do not establish live Instagram download reliability.
 
-If the Mac says it cannot open the file, go to **System Settings**, then **Privacy & Security**, and press **Open Anyway**.
+## GitHub Pages deployment
 
-## Change Shelf on your computer
+The included `.github/workflows/pages.yml` checks the project, copies only the static app assets to `_site`, and publishes that artifact on a push to `main`. Select **GitHub Actions** as the repository's Pages source if necessary. Relative asset paths support the `/shelf/` subpath. No application server or Worker is deployed.
 
-Do this only if you want to edit the app. You can skip it if you only want to save videos.
+The public assets are `index.html`, `styles.css`, `app.js`, `lib.js`, `shelf-script.js`, and `assets/favicon.svg`. Tests and review notes stay in the source repository.
 
-1. Download Node.js from [nodejs.org](https://nodejs.org). Press the big download button and install it.
-2. Download this project and unzip it. Remember the folder. A common place is **Downloads**.
-3. Open **Terminal**.
-4. Type `cd`, then a space, then drag the project folder into the Terminal window. Press Return.
-5. Type this line and press Return. Wait until it finishes. This gets the parts Shelf needs.
-
-```bash
-npm install
-```
-
-6. Type this line and press Return. This checks that Shelf works.
-
-```bash
-npm test
-```
-
-7. Type this line and press Return. This starts Shelf on your computer.
-
-```bash
-npm run dev
-```
-
-8. Terminal prints an address that starts with `http://localhost`. Hold Command and click that address. Shelf opens in your browser.
-
-
-Live app: [mikhelangelo.github.io/shelf](https://mikhelangelo.github.io/shelf/).
+See `REVIEW.md` for the professional assessment of the original attachment. Not affiliated with Instagram or Meta. Save only content you have permission to keep; keeping it does not grant permission to repost it. Questions: [GitHub issues](https://github.com/MiKhelangelo/shelf/issues).

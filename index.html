@@ -1,20 +1,97 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#f6f1ff" />
-    <meta name="referrer" content="no-referrer" />
-    <meta
-      name="description"
-      content="Save Instagram posts and Reels to your Mac. Paste a link, skip duplicates, and keep the files locally."
-    />
-    <link rel="icon" href="%BASE_URL%favicon.svg" type="image/svg+xml" />
-    <link rel="manifest" href="%BASE_URL%manifest.webmanifest" />
-    <title>Shelf</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <meta name="description" content="A local-first library for Instagram links. Export a download script, index your own files, and search your saved captions and notes.">
+  <meta name="referrer" content="no-referrer">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' blob: data:; media-src 'self' blob:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <title>Shelf — Your personal video library</title>
+  <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+  <link rel="stylesheet" href="styles.css">
+  <script src="lib.js" defer></script>
+  <script src="shelf-script.js" defer></script>
+  <script src="app.js" defer></script>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to library</a>
+<div class="app-shell">
+  <aside class="sidebar" aria-label="Library navigation">
+    <a class="brand" href="./" aria-label="Shelf home"><span class="brand-mark" aria-hidden="true">S</span><span>Shelf<span class="brand-sub">A place for your finds</span></span></a>
+    <p class="nav-label">YOUR LIBRARY</p>
+    <nav id="navigation" class="navigation">
+      <button class="nav-item active" data-filter="all" aria-current="page"><span aria-hidden="true" class="nav-icon">▦</span>All items<span class="count" id="count-all">0</span></button>
+      <button class="nav-item" data-filter="todo"><span aria-hidden="true" class="nav-icon">▤</span>To save<span class="count" id="count-todo">0</span></button>
+      <button class="nav-item" data-filter="saved"><span aria-hidden="true" class="nav-icon">✓</span>Indexed<span class="count" id="count-saved">0</span></button>
+      <button class="nav-item" data-filter="failed"><span aria-hidden="true" class="nav-icon">!</span>Needs attention<span class="count" id="count-failed">0</span></button>
+    </nav>
+    <div class="sidebar-bottom">
+      <button class="sidebar-help" id="help">How Shelf works <span aria-hidden="true">?</span></button>
+      <div class="local-note"><span class="local-symbol" aria-hidden="true">⌂</span><div><strong>Local by design</strong><p>Your library lives in this browser. Export a backup to keep it safe.</p></div></div>
+      <span class="version">SHELF / STATIC EDITION</span>
+    </div>
+  </aside>
+  <div class="workspace">
+    <header class="topbar"><span class="breadcrumb">Workspace <span aria-hidden="true">/</span> Library</span><span class="privacy-badge">Stored in your browser</span></header>
+    <main id="main">
+      <div class="page-heading"><div><p class="eyebrow">COLLECT. KEEP. FIND AGAIN.</p><h1 id="view-title">Your library<span class="title-dot">.</span></h1><p class="intro">Good finds deserve a place to stay.</p></div><button class="button secondary" id="index"><span aria-hidden="true">▱</span> Open saved folder</button></div>
+      <div id="storage-warning" class="notice warning" role="status" hidden></div>
+      <section class="composer" aria-labelledby="add-title">
+        <div class="composer-top"><h2 id="add-title">Make room for your next find</h2><span class="small-label">INSTAGRAM POSTS &amp; REELS</span></div>
+        <label class="sr-only" for="paste">Instagram links to add</label>
+        <textarea id="paste" rows="2" placeholder="Paste Instagram links here, one or many…" aria-describedby="paste-hint"></textarea>
+        <div class="composer-bottom"><p id="paste-hint">Paste post or Reel links. Duplicates are skipped.<span class="shortcut">⌘ / Ctrl + Enter to add</span></p><button class="button primary" id="add"><span aria-hidden="true">+</span> Add to library</button></div>
+        <p id="addmsg" class="inline-status" role="status"></p>
+      </section>
+      <div class="workflow-note"><span class="info-icon" aria-hidden="true">i</span><p>Shelf organizes links and local files. To save videos, <button class="text-button" id="workflow-help">export a script and run it on your Mac</button>, then open the saved folder here.</p></div>
+      <section class="library-section" aria-labelledby="library-title">
+        <div class="section-heading"><div><h2 id="library-title">All items</h2><span id="result-count" class="result-count" role="status">0 items</span></div><div class="backup-actions"><button class="text-button" id="export">Export library</button><span aria-hidden="true">/</span><button class="text-button" id="import">Import backup</button></div></div>
+        <div class="toolbar">
+          <div class="search-wrap"><span aria-hidden="true">⌕</span><label class="sr-only" for="q">Search library</label><input id="q" type="search" placeholder="Search captions, creators, hashtags, notes…"></div>
+          <label class="sr-only" for="kind">Filter by post type</label><select id="kind"><option value="all">All types</option><option value="reel">Reels</option><option value="post">Posts</option><option value="tv">TV</option></select>
+          <label class="sr-only" for="sort">Sort library</label><select id="sort"><option value="newest">Newest added</option><option value="oldest">Oldest added</option><option value="author">Creator A–Z</option></select>
+        </div>
+        <div class="selection-bar"><button class="text-button" id="all">Select matching</button><span id="selected-count">0 selected</span><button class="button primary compact" id="script" disabled><span aria-hidden="true">↓</span> Get save script</button></div>
+        <p id="idxmsg" class="index-status" role="status"></p>
+        <div id="folder-note" class="folder-note" hidden></div>
+        <ul id="list" class="item-grid" aria-label="Library items"></ul>
+        <div id="empty" class="empty-state">
+          <div class="empty-mark" aria-hidden="true">▤</div><h3>A little space for what inspires you.</h3><p>Your first find starts with a link.<br>Paste an Instagram post or Reel above, or open a folder you already saved.</p><button class="button secondary" id="empty-add">Add your first link</button>
+          <div class="empty-flow"><span><b>01</b> Collect links</span><span><b>02</b> Save with a script</span><span><b>03</b> Open &amp; explore</span></div>
+        </div>
+        <div id="no-results" class="empty-state small-empty" hidden><h3>No finds match just yet.</h3><p>Try a different search or show all your items.</p><button id="reset" class="button secondary">Reset filters</button></div>
+        <button id="more" class="button secondary show-more" hidden>Show more</button>
+      </section>
+      <footer><span>Shelf is an independent project, unaffiliated with Instagram or Meta.</span><span>Save content you have permission to keep. Saving isn’t permission to repost.</span></footer>
+    </main>
+  </div>
+</div>
+<noscript><div class="notice">Shelf needs JavaScript to manage your local library. Enable it and reload this page.</div></noscript>
+<input id="dir" type="file" webkitdirectory multiple hidden aria-label="Choose saved Shelf folder">
+<input id="backup" type="file" accept="application/json,.json" hidden aria-label="Choose library backup">
+<dialog id="guide" aria-labelledby="guide-title">
+  <div class="dialog-heading"><div><p class="eyebrow">THE LOCAL WORKFLOW</p><h2 id="guide-title">From a link to your library.</h2></div><button class="icon-button" data-close="guide" aria-label="Close guide">×</button></div>
+  <p class="dialog-intro">This is a static web app. It can make a script and read files you choose; it can’t download videos or watch your disk itself.</p>
+  <ol class="guide-steps">
+    <li><span class="step-number">1</span><div><h3>Collect your links</h3><p>Paste Instagram post or Reel URLs. Choose which items to include in the save script.</p></div></li>
+    <li><span class="step-number">2</span><div><h3>Install the downloader once</h3><p>With <a href="https://brew.sh" target="_blank" rel="noopener noreferrer">Homebrew</a> already installed on your Mac, run:</p><code class="command">brew install yt-dlp</code><p>Or follow the <a href="https://github.com/yt-dlp/yt-dlp#installation" target="_blank" rel="noopener noreferrer">official yt-dlp instructions</a>. Shelf doesn’t install anything for you.</p></div></li>
+    <li><span class="step-number">3</span><div><h3>Review and run your script</h3><p>Get the script below. If it’s in Downloads, run:</p><div class="command-row"><code class="command">cd ~/Downloads &amp;&amp; bash shelf-instagram.sh</code><button class="icon-button" id="copy-command" aria-label="Copy Terminal command">Copy</button></div><p>Files go to <code>~/Movies/Shelf/&lt;shortcode&gt;/</code>. The script contacts Instagram and its media hosts. It doesn’t use cookies or sign in.</p></div></li>
+    <li><span class="step-number">4</span><div><h3>Open your saved folder</h3><p>Choose the <code>Shelf</code> folder here. Captions and creators become searchable. Local videos are available to play until you close or reload the page; reopen the folder to reconnect them.</p></div></li>
+  </ol>
+  <div class="notice"><strong>Some posts won’t save.</strong> Instagram may require login, block requests, or remove a post. Photo-only posts may be unsupported. Failed links are recorded for review; Shelf doesn’t bypass access restrictions.</div>
+  <details class="script-details"><summary>Inspect the script before running it</summary><pre id="script-preview">Add and select a link to preview your generated script.</pre></details>
+  <div class="dialog-actions"><button id="guide-script" class="button primary" disabled>Download script</button><button class="button secondary" data-close="guide">Back to library</button></div>
+  <p class="privacy-detail">The page sends no library or file data to a service. The host still receives normal page requests. Browser storage can be cleared; a JSON export backs up links and metadata, not your videos.</p>
+</dialog>
+<dialog id="editor" aria-labelledby="editor-title"><form id="edit-form">
+  <div class="dialog-heading"><h2 id="editor-title">A note for this find</h2><button class="icon-button" type="button" data-close="editor" aria-label="Close editor">×</button></div>
+  <label for="edit-title">Your title</label><input id="edit-title" maxlength="240" placeholder="Give this find a name">
+  <label for="edit-note">Notes &amp; tags</label><textarea id="edit-note" maxlength="1000" rows="5" placeholder="Why you saved it, ideas, #tags…"></textarea>
+  <p class="muted">Your title and notes are searchable and stay separate from the original caption.</p>
+  <div class="dialog-actions"><button class="button primary" type="submit">Save note</button><button class="button secondary" type="button" data-close="editor">Cancel</button></div>
+</form></dialog>
+<dialog id="player" aria-labelledby="player-title"><div class="dialog-heading"><h2 id="player-title">Local video</h2><button class="icon-button" data-close="player" aria-label="Close player">×</button></div><label class="sr-only" for="video-parts">Choose video</label><select id="video-parts" hidden></select><video id="video" controls playsinline></video><p id="video-message" class="muted" role="status">Playback depends on your browser’s supported video formats.</p></dialog>
+<div id="toast" class="toast" inert role="status" aria-live="polite"></div>
+</body>
 </html>
