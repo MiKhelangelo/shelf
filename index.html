@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="color-scheme" content="light">
-  <meta name="description" content="A local-first library for Instagram links. Export a download script, index your own files, and search your saved captions and notes.">
+  <meta name="description" content="A local-first library for Instagram links. Copy a save script, index your own files, and search your saved captions and notes.">
   <meta name="referrer" content="no-referrer">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' blob: data:; media-src 'self' blob:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
   <title>Shelf — Your personal video library</title>
@@ -44,7 +44,7 @@
         <div class="composer-bottom"><p id="paste-hint">Paste post or Reel links. Duplicates are skipped.<span class="shortcut">⌘ / Ctrl + Enter to add</span></p><button class="button primary" id="add"><span aria-hidden="true">+</span> Add to library</button></div>
         <p id="addmsg" class="inline-status" role="status"></p>
       </section>
-      <div class="workflow-note"><span class="info-icon" aria-hidden="true">i</span><p>Shelf organizes links and local files. To save videos, <button class="text-button" id="workflow-help">export a script and run it on your Mac</button>, then open the saved folder here.</p></div>
+      <div class="workflow-note"><span class="info-icon" aria-hidden="true">i</span><p>Shelf organizes links and local files. To save videos, <button class="text-button" id="workflow-help">copy a script and run it on your Mac</button>, then open the saved folder here.</p></div>
       <section class="library-section" aria-labelledby="library-title">
         <div class="section-heading"><div><h2 id="library-title">All items</h2><span id="result-count" class="result-count" role="status">0 items</span></div><div class="backup-actions"><button class="text-button" id="export">Export library</button><span aria-hidden="true">/</span><button class="text-button" id="import">Import backup</button></div></div>
         <div class="toolbar">
@@ -52,7 +52,7 @@
           <label class="sr-only" for="kind">Filter by post type</label><select id="kind"><option value="all">All types</option><option value="reel">Reels</option><option value="post">Posts</option><option value="tv">TV</option></select>
           <label class="sr-only" for="sort">Sort library</label><select id="sort"><option value="newest">Newest added</option><option value="oldest">Oldest added</option><option value="author">Creator A–Z</option></select>
         </div>
-        <div class="selection-bar"><button class="text-button" id="all">Select matching</button><span id="selected-count">0 selected</span><button class="button primary compact" id="script" disabled><span aria-hidden="true">↓</span> Get save script</button></div>
+        <div class="selection-bar"><button class="text-button" id="all">Select matching</button><span id="selected-count">0 selected</span><button class="button primary compact" id="script" disabled>Copy script</button></div>
         <p id="idxmsg" class="index-status" role="status"></p>
         <div id="folder-note" class="folder-note" hidden></div>
         <ul id="list" class="item-grid" aria-label="Library items"></ul>
@@ -76,12 +76,12 @@
   <ol class="guide-steps">
     <li><span class="step-number">1</span><div><h3>Collect your links</h3><p>Paste Instagram post or Reel URLs. Choose which items to include in the save script.</p></div></li>
     <li><span class="step-number">2</span><div><h3>Install the downloader once</h3><p>With <a href="https://brew.sh" target="_blank" rel="noopener noreferrer">Homebrew</a> already installed on your Mac, run:</p><code class="command">brew install yt-dlp</code><p>Or follow the <a href="https://github.com/yt-dlp/yt-dlp#installation" target="_blank" rel="noopener noreferrer">official yt-dlp instructions</a>. Shelf doesn’t install anything for you.</p></div></li>
-    <li><span class="step-number">3</span><div><h3>Review and run your script</h3><p>Get the script below. If it’s in Downloads, run:</p><div class="command-row"><code class="command">cd ~/Downloads &amp;&amp; bash shelf-instagram.sh</code><button class="icon-button" id="copy-command" aria-label="Copy Terminal command">Copy</button></div><p>Files go to <code>~/Movies/Shelf/&lt;shortcode&gt;/</code>. The script contacts Instagram and its media hosts. It doesn’t use cookies or sign in.</p></div></li>
+    <li><span class="step-number">3</span><div><h3>Copy and run your script</h3><p>Choose Copy script. Then, in Terminal, save that copy and run it:</p><div class="command-row"><code class="command">pbpaste > ~/Downloads/shelf-instagram.sh &amp;&amp; bash ~/Downloads/shelf-instagram.sh</code><button class="icon-button" id="copy-command" aria-label="Copy Terminal command">Copy</button></div><p>Files go to <code>~/Movies/Shelf/&lt;shortcode&gt;/</code>. The script contacts Instagram and its media hosts. It doesn’t use cookies or sign in.</p></div></li>
     <li><span class="step-number">4</span><div><h3>Open your saved folder</h3><p>Choose the <code>Shelf</code> folder here. Captions and creators become searchable. Local videos are available to play until you close or reload the page; reopen the folder to reconnect them.</p></div></li>
   </ol>
   <div class="notice"><strong>Some posts won’t save.</strong> Instagram may require login, block requests, or remove a post. Photo-only posts may be unsupported. Failed links are recorded for review; Shelf doesn’t bypass access restrictions.</div>
   <details class="script-details"><summary>Inspect the script before running it</summary><pre id="script-preview">Add and select a link to preview your generated script.</pre></details>
-  <div class="dialog-actions"><button id="guide-script" class="button primary" disabled>Download script</button><button class="button secondary" data-close="guide">Back to library</button></div>
+  <div class="dialog-actions"><button id="guide-script" class="button primary" disabled>Copy script</button><button class="button secondary" data-close="guide">Back to library</button></div>
   <p class="privacy-detail">The page sends no library or file data to a service. The host still receives normal page requests. Browser storage can be cleared; a JSON export backs up links and metadata, not your videos.</p>
 </dialog>
 <dialog id="editor" aria-labelledby="editor-title"><form id="edit-form">

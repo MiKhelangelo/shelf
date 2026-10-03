@@ -7,12 +7,12 @@ Shelf is a static web app for keeping Instagram links and searching your own vid
 ## The workflow
 
 1. Paste Instagram post or Reel links. Duplicate shortcodes are skipped. Add your own title, notes, and hashtags immediately.
-2. Select the links you want and choose **Get save script**. Review the generated source in **How Shelf works** before running it.
+2. Select the links you want and choose **Copy script**. Review the generated source in **How Shelf works** before running it.
 3. Install [yt-dlp](https://github.com/yt-dlp/yt-dlp/wiki/Installation). If you already use Homebrew: `brew install yt-dlp`.
-4. Assuming your script is in Downloads, run:
+4. After **Copy script**, save the clipboard and run it:
 
    ```bash
-   cd ~/Downloads && bash shelf-instagram.sh
+   pbpaste > ~/Downloads/shelf-instagram.sh && bash ~/Downloads/shelf-instagram.sh
    ```
 
 5. Files and `.info.json` sidecars go into `~/Movies/Shelf/<shortcode>/`. Return to the page, choose **Open saved folder**, and select `Shelf`.

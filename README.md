@@ -23,7 +23,7 @@ Shelf gives your finds a place to stay: add links, write notes, and search them 
 
 1. **Collect links.** Paste posts or Reels, then add a title or note.
 2. **Use your library.** Search your finds and export a backup whenever you need one.
-3. **Save files, optionally.** Select links, export the Bash script, and review it before running it with [yt-dlp](https://github.com/yt-dlp/yt-dlp/wiki/Installation) in Terminal on your Mac.
+3. **Save files, optionally.** Select links, choose **Copy script**, and review it before saving and running it with [yt-dlp](https://github.com/yt-dlp/yt-dlp/wiki/Installation) in Terminal on your Mac.
 4. **Connect your folder.** Choose **Open saved folder** to index captions and play local videos. Reopen the folder after a reload to reconnect playback.
 
 The script runs in Terminal, never in the browser. It uses no login cookies. Instagram can require login or block requests, so downloads may fail. The link library works without the script.

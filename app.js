@@ -58,8 +58,8 @@
     $('#selected-count').textContent = plural(count, 'selected item');
     const ready = count > 0 && count <= 500 && !indexing;
     $('#script').disabled = $('#guide-script').disabled = !ready;
-    $('#script').title = count > 500 ? 'Choose at most 500 items per script.' : 'Download a script for selected items';
-    $('#guide-script').textContent = count > 500 ? 'Select at most 500 items' : `Download script${count ? ` (${count})` : ''}`;
+    $('#script').title = count > 500 ? 'Choose at most 500 items per script.' : 'Copy a script for the selected items';
+    $('#guide-script').textContent = count > 500 ? 'Select at most 500 items' : `Copy script${count ? ` (${count})` : ''}`;
     const list = visible();
     $('#all').disabled = indexing || list.length === 0;
     $('#all').textContent = list.length && list.every((i) => i.selected) ? 'Deselect matching' : 'Select matching';
@@ -136,8 +136,13 @@
   function openDialog(id) { if (!$('#' + id).open) $('#' + id).showModal(); }
   function guide() { updatePreview(); updateSelection(); openDialog('guide'); }
   function getScript() {
-    try { download(scriptText(), 'shelf-instagram.sh', 'text/plain;charset=utf-8'); guide(); toast('Script prepared. Check your browser downloads, then review it before running.'); }
-    catch (e) { toast(e.message); }
+    let text;
+    try { text = scriptText(); }
+    catch (e) { toast(e.message); return; }
+    guide();
+    const fail = () => toast('Clipboard unavailable. Select the script below and copy it.');
+    if (!navigator.clipboard || !navigator.clipboard.writeText) { fail(); return; }
+    navigator.clipboard.writeText(text).then(() => toast('Script copied. In Terminal, save it with the command in How Shelf works.'), fail);
   }
   function edit(i) { if (indexing) return; editingCode = i.code; $('#edit-title').value = i.userTitle || ''; $('#edit-note').value = i.userNote || (i.status !== 'failed' ? i.note : '') || ''; openDialog('editor'); }
   function remove(i) {
@@ -241,7 +246,7 @@
   document.querySelectorAll('[data-close]').forEach((button) => { button.onclick = () => button.dataset.close === 'player' ? closePlayer() : $('#' + button.dataset.close).close(); });
   $('#player').addEventListener('close', () => { if (activeVideoURL) closePlayer(); });
   $('#video').addEventListener('error', () => { if (activeVideoURL) $('#video-message').textContent = 'This browser couldn’t play this file. Open the video in a compatible local player.'; });
-  $('#copy-command').onclick = async () => { try { await navigator.clipboard.writeText('cd ~/Downloads && bash shelf-instagram.sh'); $('#copy-command').textContent = 'Copied'; setTimeout(() => { $('#copy-command').textContent = 'Copy'; }, 2000); } catch (e) { $('#copy-command').textContent = 'Select text'; toast('Clipboard unavailable. Select and copy the displayed command.'); } };
+  $('#copy-command').onclick = async () => { try { await navigator.clipboard.writeText('pbpaste > ~/Downloads/shelf-instagram.sh && bash ~/Downloads/shelf-instagram.sh'); $('#copy-command').textContent = 'Copied'; setTimeout(() => { $('#copy-command').textContent = 'Copy'; }, 2000); } catch (e) { $('#copy-command').textContent = 'Select text'; toast('Clipboard unavailable. Select and copy the displayed command.'); } };
   window.addEventListener('pagehide', () => { if (activeVideoURL) URL.revokeObjectURL(activeVideoURL); });
   load(); render();
 })();
