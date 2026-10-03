@@ -8,13 +8,14 @@ import {
   LIBRARY_LIMIT,
   matchesQuery,
   mergeLinks,
-  reelsForKeyword,
   tally,
   itemTitle,
   type Item,
   type Kind,
 } from "./lib/instagram";
+import { pickRandom, REEL_INDEX, sanitizeReel, searchCatalog, wordsOf, type ReelRecord } from "./lib/catalog";
 import { generateScript } from "./lib/script";
+import { readSubmissions, saveSubmission } from "./lib/submissions";
 import {
   BROWSER_LABEL,
   CONCURRENCY,
@@ -71,6 +72,12 @@ export function ShelfApp() {
   const [settings, setSettings] = useState<Settings>(defaultSettings);
   const [list, setList] = useState("");
   const [query, setQuery] = useState("");
+  const [randomHits, setRandomHits] = useState<ReelRecord[] | null>(null);
+  const [submissions, setSubmissions] = useState<ReelRecord[]>([]);
+  const [draftUrl, setDraftUrl] = useState("");
+  const [draftTitle, setDraftTitle] = useState("");
+  const [draftTags, setDraftTags] = useState("");
+  const [draftDescription, setDraftDescription] = useState("");
   const [kind, setKind] = useState<KindFilter>("all");
   const [notice, setNotice] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -85,6 +92,7 @@ export function ShelfApp() {
       setItems(saved.items);
       setSettings(saved.settings);
     }
+    setSubmissions(readSubmissions());
     setHydrated(true);
   }, []);
 
@@ -117,6 +125,15 @@ export function ShelfApp() {
   const counts = tally(items);
   const binaryError = pathError(settings.binary);
   const folderError = pathError(settings.outputDir);
+  const catalog = useMemo(() => {
+    const seen = new Set(submissions.map((reel) => reel.shortcode));
+    return [...submissions, ...REEL_INDEX.filter((reel) => !seen.has(reel.shortcode))];
+  }, [submissions]);
+  const hits = useMemo(
+    () => (wordsOf(query).length === 0 ? [] : searchCatalog(catalog, query, 12)),
+    [catalog, query],
+  );
+  const shown = wordsOf(query).length === 0 ? (randomHits ?? []) : hits;
   const filtered = useMemo(
     () => items.filter((item) => (kind === "all" || item.kind === kind) && matchesQuery(item, query)),
     [items, kind, query],
@@ -172,23 +189,58 @@ export function ShelfApp() {
     return true;
   }
 
-  function findReels() {
-    const found = reelsForKeyword(query);
-    if (found.length === 0) {
-      setNotice("Use a word of at least 2 letters.");
+  function addCatalog(reels: readonly ReelRecord[]) {
+    if (reels.length === 0) {
+      setNotice("No reels match that word.");
       return;
     }
     const room = Math.max(LIBRARY_LIMIT - items.length, 0);
-    const accepted = found.slice(0, room);
-    const merged = mergeLinks(items, accepted);
+    const accepted = reels.slice(0, room);
+    const merged = mergeLinks(
+      items,
+      accepted.map((reel) => ({ ...reel, kind: "reel" as const })),
+    );
     setItems(merged.items.slice(0, LIBRARY_LIMIT));
     setKind("all");
-    const words = found.map((item) => itemTitle(item)).join(", ");
     if (merged.added === 0) {
-      setNotice(`${words} is already in the library.`);
+      setNotice("Those reels are already in the library.");
       return;
     }
-    setNotice(`Added a search for ${words}. Up to 15 recent reels for each word.`);
+    setNotice(merged.added === 1 ? "Added 1 reel." : `Added ${merged.added} reels.`);
+  }
+
+  function findReels() {
+    if (wordsOf(query).length === 0) {
+      setRandomHits(pickRandom(catalog, 12));
+      setNotice("12 reels picked at random from the index.");
+      return;
+    }
+    setRandomHits(null);
+    const found = searchCatalog(catalog, query, 12);
+    setNotice(found.length === 0 ? "No reels match that word." : `${found.length} reels match that word.`);
+  }
+
+  function submitReel() {
+    const reel = sanitizeReel(
+      {
+        url: draftUrl,
+        title: draftTitle,
+        description: draftDescription,
+        tags: draftTags.split(","),
+        source: "submission",
+      },
+      "submission",
+    );
+    if (!reel) {
+      setNotice("Use one Instagram Reel link.");
+      return;
+    }
+    setSubmissions(saveSubmission(reel));
+    setDraftUrl("");
+    setDraftTitle("");
+    setDraftTags("");
+    setDraftDescription("");
+    setNotice("Saved your reel in this browser. It is included in search.");
   }
 
   function saveToDownloads() {
@@ -490,6 +542,62 @@ export function ShelfApp() {
           </div>
         </div>
 
+        {shown.length > 0 ? (
+          <div className="flex flex-col gap-2">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-sm text-muted">
+                {shown.length} {shown.length === 1 ? "reel" : "reels"} from the index
+              </p>
+              <button type="button" className={secondaryButton} onClick={() => addCatalog(shown)}>
+                <Plus className="size-4" aria-hidden="true" />
+                Add matches
+              </button>
+            </div>
+            <ul className="grid gap-2">
+              {shown.map((reel) => (
+                <li key={reel.shortcode} className="flex flex-col gap-2 rounded-lg border border-line bg-field p-3 sm:flex-row sm:items-start">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium text-pretty text-ink">{reel.title}</p>
+                    <p className="mt-1 line-clamp-2 text-sm text-pretty text-muted">{reel.description}</p>
+                    {reel.tags.length > 0 ? (
+                      <p className="mt-1 text-xs text-muted">{reel.tags.slice(0, 5).map((tag) => `#${tag}`).join(" ")}</p>
+                    ) : null}
+                  </div>
+                  <button type="button" className={secondaryButton} onClick={() => addCatalog([reel])}>
+                    <Plus className="size-4" aria-hidden="true" />
+                    Add
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+
+        <details className="rounded-lg border border-line px-3">
+          <summary className="flex min-h-11 cursor-pointer items-center text-sm font-medium text-ink">Submit a reel</summary>
+          <div className="grid gap-3 pb-3">
+            <label className="block">
+              <span className="mb-1 block text-sm font-medium text-ink">Reel link</span>
+              <input value={draftUrl} onChange={(event) => setDraftUrl(event.target.value)} placeholder="https://www.instagram.com/reel/…" spellCheck={false} className={fieldClass} />
+            </label>
+            <label className="block">
+              <span className="mb-1 block text-sm font-medium text-ink">Title</span>
+              <input value={draftTitle} onChange={(event) => setDraftTitle(event.target.value)} className={fieldClass} />
+            </label>
+            <label className="block">
+              <span className="mb-1 block text-sm font-medium text-ink">Tags</span>
+              <input value={draftTags} onChange={(event) => setDraftTags(event.target.value)} placeholder="travel, music" className={fieldClass} />
+            </label>
+            <label className="block">
+              <span className="mb-1 block text-sm font-medium text-ink">Description</span>
+              <input value={draftDescription} onChange={(event) => setDraftDescription(event.target.value)} className={fieldClass} />
+            </label>
+            <button type="button" className={`${secondaryButton} w-full sm:w-auto`} onClick={submitReel}>
+              Save to index
+            </button>
+          </div>
+        </details>
+
         <div className="flex flex-wrap items-center justify-between gap-1">
           <p className="min-h-11 px-1 py-2 text-sm text-pretty text-muted tabular-nums" role="status">
             {notice ?? summary}
@@ -509,7 +617,7 @@ export function ShelfApp() {
 
         {items.length === 0 ? (
           <p className="panel px-5 py-12 text-sm text-pretty text-muted">
-            Nothing here yet. Paste a link, or search reels by a word.
+            Nothing here yet. Paste a link, search the index, or submit a reel.
           </p>
         ) : filtered.length === 0 ? (
           <p className="panel px-5 py-12 text-sm text-pretty text-muted">No results for that search.</p>
@@ -528,7 +636,8 @@ export function ShelfApp() {
                   />
                   <div className="min-w-0 flex-1 py-2">
                     <p className="text-xs font-medium tracking-widest text-muted uppercase">{kindLabel(item.kind)}</p>
-                    <p className="truncate font-mono text-sm text-ink">{itemTitle(item)}</p>
+                    <p className="truncate text-sm text-ink">{item.title || itemTitle(item)}</p>
+                    {item.title ? <p className="truncate font-mono text-xs text-muted">{item.shortcode}</p> : null}
                   </div>
                   <button
                     type="button"

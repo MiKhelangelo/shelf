@@ -4,7 +4,8 @@ import { chmodSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
-import { capIncoming, extractInstagramUrls, mergeLinks, parseInstagramUrl, reelsForKeyword } from "./instagram.ts";
+import { capIncoming, extractInstagramUrls, mergeLinks, parseInstagramUrl } from "./instagram.ts";
+import { REEL_INDEX, pickRandom, searchCatalog } from "./catalog.ts";
 import { generateScript } from "./script.ts";
 import { seedItems, SEED_URLS } from "./seed.ts";
 import { defaultSettings, type Settings } from "./settings.ts";
@@ -274,32 +275,42 @@ exit 0
   assert.doesNotMatch(failed, /Ddqg_NAmSJ1/);
 });
 
-test("a keyword becomes a tag search of at most 15 reels", () => {
-  const found = reelsForKeyword("Travel, travel! pasta");
-  assert.deepEqual(
-    found.map((item) => item.shortcode),
-    ["tag:travel", "tag:pasta"],
-  );
-  assert.deepEqual(
-    reelsForKeyword("a ../etc").map((item) => item.shortcode),
-    ["tag:etc"],
-  );
-  assert.equal(reelsForKeyword("..").length, 0);
-  assert.equal(parseInstagramUrl(found[0]!.url)?.url, found[0]!.url);
+test("keyword search uses the reel index, not a hashtag page", () => {
+  assert.ok(REEL_INDEX.length >= 50);
+  assert.equal(new Set(REEL_INDEX.map((reel) => reel.shortcode)).size, REEL_INDEX.length);
+  for (const reel of REEL_INDEX) {
+    assert.equal(parseInstagramUrl(reel.url)?.kind, "reel");
+    assert.ok(reel.title.length > 0);
+    assert.ok(Array.isArray(reel.tags));
+  }
 
-  const result = generateScript(
-    found.map((item) => ({ ...item, selected: true })),
-    { ...defaultSettings, concurrency: 1, pauseSeconds: 0 },
-  );
-  assert.equal(result.ok, true);
-  if (!result.ok) return;
-  assert.match(result.script, /explore\/tags\/travel/);
-  assert.match(result.script, /--playlist-end 15/);
-  assert.match(result.script, /--yes-playlist/);
-  assert.equal(bashOk(result.script), true);
+  const fixture = [
+    {
+      url: "https://www.instagram.com/reel/AAAAAAAAAAA/",
+      shortcode: "AAAAAAAAAAA",
+      title: "Night market in Taipei",
+      description: "A walk through the stalls",
+      tags: ["travel", "food"],
+      source: "reddit" as const,
+    },
+    {
+      url: "https://www.instagram.com/reel/BBBBBBBBBBB/",
+      shortcode: "BBBBBBBBBBB",
+      title: "Studio session",
+      description: "Drums and a small amp",
+      tags: ["music"],
+      source: "reddit" as const,
+    },
+  ];
+  const found = searchCatalog(fixture, "taipei food");
+  assert.deepEqual(found.map((reel) => reel.shortcode), ["AAAAAAAAAAA"]);
+  assert.equal(searchCatalog(fixture, "nope").length, 0);
+
+  const random = pickRandom(fixture, 1, () => 0);
+  assert.equal(random.length, 1);
 
   const hostile = generateScript(
-    [{ ...found[0]!, url: "https://www.instagram.com/explore/tags/travel/;rm/", selected: true }],
+    [{ url: "https://www.instagram.com/explore/tags/travel/;rm/", shortcode: "tag:travel", kind: "search", selected: true }],
     defaultSettings,
   );
   assert.equal(hostile.ok, false);

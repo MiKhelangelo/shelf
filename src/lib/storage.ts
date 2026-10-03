@@ -19,12 +19,33 @@ export function parsePersisted(input: unknown): ShelfState | null {
   const seen = new Set<string>();
   for (const entry of raw.items) {
     if (!entry || typeof entry !== "object") continue;
-    const record = entry as { url?: unknown; selected?: unknown };
+    const record = entry as {
+      url?: unknown;
+      selected?: unknown;
+      title?: unknown;
+      description?: unknown;
+      tags?: unknown;
+    };
     if (typeof record.url !== "string") continue;
     const parsed = parseInstagramUrl(record.url);
     if (!parsed || seen.has(parsed.shortcode)) continue;
     seen.add(parsed.shortcode);
-    items.push({ ...parsed, selected: record.selected !== false });
+    const title = typeof record.title === "string" ? record.title.replace(/\s+/g, " ").trim().slice(0, 140) : "";
+    const description =
+      typeof record.description === "string" ? record.description.replace(/\s+/g, " ").trim().slice(0, 280) : "";
+    const tags = Array.isArray(record.tags)
+      ? [...new Set(record.tags.filter((tag): tag is string => typeof tag === "string"))]
+          .map((tag) => tag.trim().toLowerCase())
+          .filter((tag) => /^[a-z0-9-]{2,30}$/.test(tag))
+          .slice(0, 8)
+      : [];
+    items.push({
+      ...parsed,
+      selected: record.selected !== false,
+      ...(title ? { title } : {}),
+      ...(description ? { description } : {}),
+      ...(tags.length ? { tags } : {}),
+    });
     if (items.length >= LIBRARY_LIMIT) break;
   }
 

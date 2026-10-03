@@ -8,6 +8,9 @@ export type ParsedLink = {
 
 export type Item = ParsedLink & {
   selected: boolean;
+  title?: string;
+  description?: string;
+  tags?: string[];
 };
 
 function kindFromSegment(segment: string): Kind | null {
@@ -161,20 +164,39 @@ export function itemTitle(item: Pick<Item, "kind" | "shortcode">): string {
   return item.kind === "search" ? item.shortcode.slice(4) : item.shortcode;
 }
 
+const SEARCH_SKIP = new Set(["reel", "reels", "post", "posts", "video", "videos", "instagram", "ig"]);
+
 export function matchesQuery(item: Item, query: string): boolean {
-  const needle = query.trim().toLowerCase();
-  if (!needle) return true;
-  return (
-    item.shortcode.toLowerCase().includes(needle) ||
-    itemTitle(item).includes(needle) ||
-    item.url.toLowerCase().includes(needle) ||
-    item.kind.includes(needle)
-  );
+  const words = query
+    .trim()
+    .toLowerCase()
+    .split(/[^a-z0-9_]+/)
+    .filter((word) => word.length >= 2 && !SEARCH_SKIP.has(word));
+  if (words.length === 0) return true;
+  const title = itemTitle(item).toLowerCase();
+  const code = item.shortcode.toLowerCase();
+  const label = kindLabel(item.kind).toLowerCase();
+  const extra = `${item.title ?? ""} ${item.description ?? ""} ${(item.tags ?? []).join(" ")}`.toLowerCase();
+  return words.every((word) => title.includes(word) || code.includes(word) || label === word || extra.includes(word));
+}
+
+function cleanText(value: unknown, max: number): string | undefined {
+  if (typeof value !== "string") return undefined;
+  const text = value.replace(/\s+/g, " ").trim().slice(0, max);
+  return text || undefined;
+}
+
+function cleanTags(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return [...new Set(value.filter((tag): tag is string => typeof tag === "string"))]
+    .map((tag) => tag.trim().toLowerCase())
+    .filter((tag) => /^[a-z0-9-]{2,30}$/.test(tag))
+    .slice(0, 8);
 }
 
 export function mergeLinks(
   existing: readonly Item[],
-  incoming: readonly ParsedLink[],
+  incoming: readonly (ParsedLink & { title?: string; description?: string; tags?: string[] })[],
 ): { items: Item[]; added: number; duplicates: number } {
   const seen = new Set(existing.map((item) => item.shortcode));
   const items = [...existing];
@@ -187,7 +209,18 @@ export function mergeLinks(
       continue;
     }
     seen.add(link.shortcode);
-    items.push({ ...link, selected: true });
+    const title = cleanText(link.title, 140);
+    const description = cleanText(link.description, 280);
+    const tags = cleanTags(link.tags);
+    items.push({
+      url: link.url,
+      shortcode: link.shortcode,
+      kind: link.kind,
+      selected: true,
+      ...(title ? { title } : {}),
+      ...(description ? { description } : {}),
+      ...(tags.length ? { tags } : {}),
+    });
     added += 1;
   }
 

@@ -14,8 +14,9 @@ Your browser login stays in Safari or Firefox. Nothing is uploaded.
 
 ## Included
 
-- Search the library by a word, code, or link.
-- Find reels for a word. Each word saves up to 15 recent reels.
+- Search by a word. Shelf looks through a saved index of Reel links, titles, tags, and descriptions.
+- Press **Find reels** with the box empty for a random set from that index.
+- Submit a Reel of your own. It stays in this browser and is included in search.
 - Skip items you already saved, or download them again.
 - Optional thumbnails before you download.
 - Several downloads at a time. If one fails, the rest continue.
