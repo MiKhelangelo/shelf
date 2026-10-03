@@ -6,11 +6,18 @@ export type ParsedLink = {
   kind: Kind;
 };
 
+export type SaveStatus = "ready" | "saved" | "failed" | "already";
+
 export type Item = ParsedLink & {
   selected: boolean;
   title?: string;
   description?: string;
   tags?: string[];
+  author?: string;
+  collection?: string;
+  savedAt?: string;
+  status?: SaveStatus;
+  note?: string;
 };
 
 function kindFromSegment(segment: string): Kind | null {
@@ -176,7 +183,7 @@ export function matchesQuery(item: Item, query: string): boolean {
   const title = itemTitle(item).toLowerCase();
   const code = item.shortcode.toLowerCase();
   const label = kindLabel(item.kind).toLowerCase();
-  const extra = `${item.title ?? ""} ${item.description ?? ""} ${(item.tags ?? []).join(" ")}`.toLowerCase();
+  const extra = `${item.title ?? ""} ${item.description ?? ""} ${item.author ?? ""} ${item.collection ?? ""} ${item.note ?? ""} ${(item.tags ?? []).join(" ")}`.toLowerCase();
   return words.every((word) => title.includes(word) || code.includes(word) || label === word || extra.includes(word));
 }
 
@@ -196,7 +203,13 @@ function cleanTags(value: unknown): string[] {
 
 export function mergeLinks(
   existing: readonly Item[],
-  incoming: readonly (ParsedLink & { title?: string; description?: string; tags?: string[] })[],
+  incoming: readonly (ParsedLink & {
+    title?: string;
+    description?: string;
+    tags?: string[];
+    author?: string;
+    collection?: string;
+  })[],
 ): { items: Item[]; added: number; duplicates: number } {
   const seen = new Set(existing.map((item) => item.shortcode));
   const items = [...existing];
@@ -211,14 +224,20 @@ export function mergeLinks(
     seen.add(link.shortcode);
     const title = cleanText(link.title, 140);
     const description = cleanText(link.description, 280);
+    const author = cleanText(link.author, 80);
+    const collection = cleanText(link.collection, 40);
     const tags = cleanTags(link.tags);
     items.push({
       url: link.url,
       shortcode: link.shortcode,
       kind: link.kind,
       selected: true,
+      status: "ready",
+      savedAt: new Date().toISOString(),
       ...(title ? { title } : {}),
       ...(description ? { description } : {}),
+      ...(author ? { author } : {}),
+      ...(collection ? { collection } : {}),
       ...(tags.length ? { tags } : {}),
     });
     added += 1;

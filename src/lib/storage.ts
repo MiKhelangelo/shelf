@@ -1,4 +1,4 @@
-import { LIBRARY_LIMIT, parseInstagramUrl, type Item } from "./instagram.ts";
+import { LIBRARY_LIMIT, parseInstagramUrl, type Item, type SaveStatus } from "./instagram.ts";
 import { sanitizeSettings, type Settings } from "./settings.ts";
 
 export const STORAGE_KEY = "shelf.v4";
@@ -9,6 +9,11 @@ export type ShelfState = {
   items: Item[];
   settings: Settings;
 };
+
+function clip(value: unknown, max: number): string {
+  if (typeof value !== "string") return "";
+  return value.replace(/\s+/g, " ").trim().slice(0, max);
+}
 
 export function parsePersisted(input: unknown): ShelfState | null {
   if (!input || typeof input !== "object") return null;
@@ -25,6 +30,11 @@ export function parsePersisted(input: unknown): ShelfState | null {
       title?: unknown;
       description?: unknown;
       tags?: unknown;
+      author?: unknown;
+      collection?: unknown;
+      savedAt?: unknown;
+      status?: unknown;
+      note?: unknown;
     };
     if (typeof record.url !== "string") continue;
     const parsed = parseInstagramUrl(record.url);
@@ -39,12 +49,25 @@ export function parsePersisted(input: unknown): ShelfState | null {
           .filter((tag) => /^[a-z0-9-]{2,30}$/.test(tag))
           .slice(0, 8)
       : [];
+    const author = clip(record.author, 80);
+    const collection = clip(record.collection, 40);
+    const note = clip(record.note, 180);
+    const savedAt = typeof record.savedAt === "string" && /^\d{4}-\d{2}-\d{2}T/.test(record.savedAt) ? record.savedAt.slice(0, 40) : "";
+    const status: SaveStatus =
+      record.status === "saved" || record.status === "failed" || record.status === "already" || record.status === "ready"
+        ? record.status
+        : "ready";
     items.push({
       ...parsed,
       selected: record.selected !== false,
+      status,
       ...(title ? { title } : {}),
       ...(description ? { description } : {}),
       ...(tags.length ? { tags } : {}),
+      ...(author ? { author } : {}),
+      ...(collection ? { collection } : {}),
+      ...(note ? { note } : {}),
+      ...(savedAt ? { savedAt } : {}),
     });
     if (items.length >= LIBRARY_LIMIT) break;
   }

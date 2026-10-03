@@ -1,26 +1,29 @@
 # Shelf
 
-Save Instagram posts and Reels to your Mac.
+Saves posts and Reels you choose to your Mac. Everything stays on your computer.
 
-Paste one link, or up to 200. Shelf keeps a searchable library, skips duplicates, and saves one file to Downloads. Open that file and the videos are saved on your computer.
+There is no Shelf account, no upload, and no Shelf server. Shelf does not sign in to Instagram, does not open private accounts, and does not share what you save. Not affiliated with Instagram or Meta. Respect the creator’s rights and Instagram’s terms.
 
-Your browser login stays in Safari or Firefox. Nothing is uploaded.
+The page is the product. It works on macOS 12 or later. Safari cannot give a website a folder, so the page does not write videos itself. If you want the video files, save `shelf-instagram.sh` and run it in Terminal. The page shows the file’s SHA-256 checksum and what each step does. There is no signed `.dmg`, because this project has no Apple Developer certificate.
+
+Questions and takedown requests: [GitHub issues](https://github.com/MiKhelangelo/shelf/issues).
 
 ## Steps
 
 1. Paste a post or Reel link.
 2. Choose **Save to Downloads**.
-3. Open the file. The videos are saved to `Downloads/Instagram-Reels`.
+3. Optional: copy the Terminal steps and run them. Videos go to `Downloads/Instagram-Reels`, with `shelf-index.json` beside them.
 
 ## Included
 
-- Search by a word. Shelf looks through a saved index of Reel links, titles, tags, and descriptions.
+- Search your own library by title, tag, author, or note.
+- Grid and list views, collections, and a status for each item: Chosen, Saved, Failed, or Already have it.
+- Search by a word across a saved index of public Reel links.
 - Press **Find reels** with the box empty for a random set from that index.
-- Submit a Reel of your own. It stays in this browser and is included in search.
+- Submit a Reel of your own. It stays in this browser.
 - Skip items you already saved, or download them again.
 - Optional thumbnails before you download.
-- Several downloads at a time. If one fails, the rest continue.
-- Use the Instagram session already open in Safari or Firefox.
+- If one video fails, the rest continue, and Terminal says the post may be private, deleted, or changed.
 
 Stories and profile links are not included.
 

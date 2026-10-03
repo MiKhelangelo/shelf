@@ -70,7 +70,7 @@ test("default script is bash-valid and keeps every seed link", () => {
   assert.equal(result.urlCount, 34);
   for (const item of items) {
     const occurrences: number = result.script.split(item.url).length - 1;
-    assert.equal(occurrences, 1, item.url);
+    assert.equal(occurrences, 2, item.url);
   }
   assert.match(result.script, /--cookies-from-browser safari/);
   assert.match(result.script, /--no-mtime/);
@@ -81,6 +81,8 @@ test("default script is bash-valid and keeps every seed link", () => {
   assert.match(result.script, /limit=3/);
   assert.match(result.script, /-f 'best'/);
   assert.match(result.script, /--ignore-config/);
+  assert.match(result.script, /shelf-index.json/);
+  assert.match(result.script, /Could not save this one/);
   assert.match(result.script, /--no-update/);
   assert.match(result.script, /umask 077/);
   assert.match(result.script, /Refusing an unexpected link/);

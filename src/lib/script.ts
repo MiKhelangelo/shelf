@@ -56,7 +56,7 @@ export function generateScript(items: readonly Item[], settings: Settings): Gene
 
   let script: string;
   try {
-    script = render(urls, safe);
+    script = render(urls, safe, selected);
   } catch {
     return { ok: false, error: "These settings could not make a safe file." };
   }
@@ -69,7 +69,7 @@ export function generateScript(items: readonly Item[], settings: Settings): Gene
   return { ok: true, script, urlCount: urls.length };
 }
 
-function render(urls: readonly string[], settings: Settings): string {
+function render(urls: readonly string[], settings: Settings, items: readonly Item[]): string {
   const bin = bashPath(settings.binary);
   const out = bashPath(settings.outputDir);
   const lines: string[] = [
@@ -116,7 +116,13 @@ function render(urls: readonly string[], settings: Settings): string {
     lines.push("# A word search saves up to 15 recent reels for that word.");
   }
 
-  lines.push("# Made for the Mac.");
+  lines.push("# What this file does:");
+  lines.push("# 1. Finds yt-dlp in Downloads.");
+  lines.push("# 2. Makes the Instagram-Reels folder, private to your user.");
+  lines.push("# 3. Rejects any link that is not an Instagram post or Reel.");
+  lines.push("# 4. Saves the videos you chose.");
+  lines.push("# 5. Writes shelf-index.json next to the videos.");
+  lines.push("# 6. If one video fails, the rest continue.");
   lines.push("# New files stay private. The downloader will not update itself.");
   lines.push("set -u");
   lines.push("set -o pipefail");
@@ -139,6 +145,10 @@ function render(urls: readonly string[], settings: Settings): string {
   lines.push("  printf 'Could not create folder: %s\\n' \"$out\" >&2");
   lines.push("  exit 1");
   lines.push("fi");
+  lines.push("");
+  lines.push("cat > \"$out/shelf-index.json\" << 'ENDSHELF'");
+  lines.push(indexJson(items));
+  lines.push("ENDSHELF");
   lines.push("");
   lines.push("urls=(");
   for (const url of urls) lines.push(`  ${shSingle(url)}`);
@@ -189,6 +199,7 @@ function render(urls: readonly string[], settings: Settings): string {
     lines.push("    fail=$((fail + 1))");
     lines.push("    printf '%s\\n' \"$url\" >> \"$failed_list\"");
     lines.push("    printf 'failed (exit %s): %s\\n' \"$status\" \"$url\" >&2");
+    lines.push("    printf 'Could not save this one. It may be private, deleted, or Instagram changed.\\n' >&2");
     lines.push("  fi");
     if (settings.pauseSeconds > 0) {
       lines.push('  if [ "$url" != "${urls[${#urls[@]}-1]}" ]; then');
@@ -207,6 +218,23 @@ function render(urls: readonly string[], settings: Settings): string {
 
   lines.push("");
   return `${lines.join("\n")}\n`;
+}
+
+function indexJson(items: readonly Item[]): string {
+  const plain = (value: string, max: number) =>
+    value.replace(/[`$\\\u0000-\u001f]/g, "").replace(/\s+/g, " ").trim().slice(0, max);
+  const records = items.map((item) => ({
+    url: item.url,
+    shortcode: item.shortcode,
+    kind: item.kind,
+    title: plain(item.title ?? "", 140),
+    description: plain(item.description ?? "", 280),
+    author: plain(item.author ?? "", 80),
+    collection: plain(item.collection ?? "", 40),
+    tags: (item.tags ?? []).filter((tag) => /^[a-z0-9-]{2,30}$/.test(tag)).slice(0, 8),
+    savedAt: plain(item.savedAt ?? "", 40),
+  }));
+  return JSON.stringify(records, null, 2).replaceAll("ENDSHELF", "END");
 }
 
 function parallelLoop(limit: number): string[] {
@@ -233,6 +261,7 @@ function parallelLoop(limit: number): string[] {
     "    else",
     '      printf \'fail\\n%s\\n\' "$url" > "$status_dir/$index"',
     '      printf \'failed (exit %s): %s\\n\' "$status" "$url" >&2',
+    "      printf 'Could not save this one. It may be private, deleted, or Instagram changed.\\n' >&2",
     "    fi",
     "  ) &",
     "  running=$((running + 1))",

@@ -12,6 +12,7 @@ import {
   itemTitle,
   type Item,
   type Kind,
+  type SaveStatus,
 } from "./lib/instagram";
 import { pickRandom, REEL_INDEX, sanitizeReel, searchCatalog, wordsOf, type ReelRecord } from "./lib/catalog";
 import { generateScript } from "./lib/script";
@@ -62,6 +63,13 @@ function describeAdd(
   return `${bits.join(". ")}.`;
 }
 
+function statusLabel(status: SaveStatus): string {
+  if (status === "saved") return "Saved";
+  if (status === "failed") return "Failed";
+  if (status === "already") return "Already have it";
+  return "Chosen";
+}
+
 function sessionOf(cookies: Settings["cookies"]): Session {
   if (cookies === "firefox" || cookies === "none") return cookies;
   return "safari";
@@ -78,6 +86,11 @@ export function ShelfApp() {
   const [draftTitle, setDraftTitle] = useState("");
   const [draftTags, setDraftTags] = useState("");
   const [draftDescription, setDraftDescription] = useState("");
+  const [draftAuthor, setDraftAuthor] = useState("");
+  const [collection, setCollection] = useState("");
+  const [collectionFilter, setCollectionFilter] = useState("all");
+  const [view, setView] = useState<"grid" | "list">("grid");
+  const [statusFilter, setStatusFilter] = useState<"all" | SaveStatus>("all");
   const [kind, setKind] = useState<KindFilter>("all");
   const [notice, setNotice] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -135,8 +148,15 @@ export function ShelfApp() {
   );
   const shown = wordsOf(query).length === 0 ? (randomHits ?? []) : hits;
   const filtered = useMemo(
-    () => items.filter((item) => (kind === "all" || item.kind === kind) && matchesQuery(item, query)),
-    [items, kind, query],
+    () =>
+      items.filter(
+        (item) =>
+          (kind === "all" || item.kind === kind) &&
+          (statusFilter === "all" || (item.status ?? "ready") === statusFilter) &&
+          (collectionFilter === "all" || (item.collection ?? "") === collectionFilter) &&
+          matchesQuery(item, query),
+      ),
+    [items, kind, query, statusFilter, collectionFilter],
   );
 
   useEffect(() => {
@@ -175,7 +195,10 @@ export function ShelfApp() {
     const capped = capIncoming(extracted.links);
     const room = Math.max(LIBRARY_LIMIT - items.length, 0);
     const acceptedLinks = capped.links.slice(0, room);
-    const merged = mergeLinks(items, acceptedLinks);
+    const merged = mergeLinks(
+      items,
+      acceptedLinks.map((link) => ({ ...link, collection: collection.trim() })),
+    );
     setItems(merged.items.slice(0, LIBRARY_LIMIT));
     setNotice(
       describeAdd(
@@ -225,6 +248,7 @@ export function ShelfApp() {
       {
         url: draftUrl,
         title: draftTitle,
+        author: draftAuthor,
         description: draftDescription,
         tags: draftTags.split(","),
         source: "submission",
@@ -236,10 +260,13 @@ export function ShelfApp() {
       return;
     }
     setSubmissions(saveSubmission(reel));
+    const merged = mergeLinks(items, [{ ...reel, kind: "reel", author: draftAuthor.trim(), collection: collection.trim() }]);
+    setItems(merged.items.slice(0, LIBRARY_LIMIT));
     setDraftUrl("");
     setDraftTitle("");
     setDraftTags("");
     setDraftDescription("");
+    setDraftAuthor("");
     setNotice("Saved your reel in this browser. It is included in search.");
   }
 
@@ -267,6 +294,41 @@ export function ShelfApp() {
       const area = document.createElement("textarea");
       area.value = text;
       area.setAttribute("readonly", "");
+      area.style.position = "fixed";
+      area.style.left = "-9999px";
+      document.body.appendChild(area);
+      area.select();
+      document.execCommand("copy");
+      area.remove();
+    }
+    setCopied(true);
+  }
+
+  function markStatus(shortcode: string, status: SaveStatus) {
+    setItems((current) =>
+      current.map((item) =>
+        item.shortcode === shortcode
+          ? {
+              ...item,
+              status,
+              note:
+                status === "failed"
+                  ? "Could not save. The post may be private, deleted, or Instagram may have changed."
+                  : undefined,
+              savedAt: status === "saved" ? new Date().toISOString() : item.savedAt,
+            }
+          : item,
+      ),
+    );
+  }
+
+  async function copySteps() {
+    const text = "cd ~/Downloads\nchmod +x shelf-instagram.sh yt-dlp_macos\n./shelf-instagram.sh";
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      const area = document.createElement("textarea");
+      area.value = text;
       area.style.position = "fixed";
       area.style.left = "-9999px";
       document.body.appendChild(area);
@@ -320,10 +382,6 @@ export function ShelfApp() {
   }
 
   const session = sessionOf(settings.cookies);
-  const cookieLine =
-    settings.cookies === "none"
-      ? "No browser login. Private posts will not download."
-      : `Uses the ${BROWSER_LABEL[settings.cookies]} session on this Mac. The login stays in that browser.`;
 
   const summary =
     items.length === 0
@@ -347,20 +405,41 @@ export function ShelfApp() {
 
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-6xl flex-col gap-6 px-4 pt-8 pb-12 sm:pt-12">
-      <header className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h1 className="font-display text-4xl font-medium tracking-tight text-ink">Shelf</h1>
-          <p className="mt-2 max-w-2xl text-base text-pretty text-ink">
-            Save Instagram posts and Reels to your Mac. Paste one link or up to 200. Duplicates are skipped, and the videos stay on this computer.
+      <header className="flex flex-col gap-5">
+        <div className="max-w-3xl">
+          <p className="text-sm font-medium tracking-widest text-muted uppercase">For macOS 12 or later</p>
+          <h1 className="mt-2 font-display text-4xl font-medium tracking-tight text-ink sm:text-5xl">Shelf</h1>
+          <p className="mt-3 max-w-2xl text-lg text-pretty text-ink">
+            Saves posts and Reels you choose to your Mac. Everything stays on your computer.
           </p>
         </div>
-        <p className="text-sm text-muted tabular-nums">
-          {counts.posts} posts · {counts.reels} reels
-          {counts.searches > 0 ? ` · ${counts.searches} ${counts.searches === 1 ? "search" : "searches"}` : ""}
+        <ul className="grid gap-2 sm:grid-cols-3">
+          {[
+            ["Paste a link", "Choose the posts and Reels you want. Duplicates are skipped."],
+            ["Save the file", "Shelf writes one file to Downloads. You run it in Terminal."],
+            ["Search later", "Titles, tags, and notes stay in this browser, on this Mac."],
+          ].map(([title, body]) => (
+            <li key={title} className="panel p-4">
+              <p className="font-medium text-ink">{title}</p>
+              <p className="mt-1 text-sm text-pretty text-muted">{body}</p>
+            </li>
+          ))}
+        </ul>
+        <div className="flex flex-wrap gap-2">
+          <a href="#save" className={primaryButton}>
+            <Download className="size-4" aria-hidden="true" />
+            Save the file
+          </a>
+          <a href="#library" className={secondaryButton}>
+            Open the library
+          </a>
+        </div>
+        <p className="max-w-3xl text-sm text-pretty text-muted">
+          No Shelf account. Nothing is uploaded. There is no Shelf server. Shelf does not sign in to Instagram, does not open private accounts, and does not share what you save. Not affiliated with Instagram or Meta. Respect the creator’s rights and Instagram’s terms. Saving a post for yourself is not permission to repost it.
         </p>
       </header>
 
-      <section className="panel flex flex-col gap-4 p-4">
+      <section id="save" className="panel flex flex-col gap-4 p-4">
         <label className="block">
           <span className="mb-1 block text-sm font-medium text-ink">Paste links</span>
           <textarea
@@ -432,6 +511,16 @@ export function ShelfApp() {
           </fieldset>
 
           <label className="block">
+            <span className="mb-1 block text-sm font-medium text-ink">Collection</span>
+            <input
+              value={collection}
+              onChange={(event) => setCollection(event.target.value)}
+              placeholder="Optional, such as travel"
+              className={fieldClass}
+            />
+          </label>
+
+          <label className="block">
             <span className="mb-1 block text-sm font-medium text-ink">At a time</span>
             <select
               value={settings.concurrency}
@@ -500,8 +589,14 @@ export function ShelfApp() {
         </p>
       </section>
 
-      <section className="flex flex-col gap-3">
-        <h2 className="font-display text-2xl font-medium text-ink">Library</h2>
+      <section id="library" className="flex flex-col gap-3">
+        <div className="flex items-end justify-between gap-3">
+          <h2 className="font-display text-2xl font-medium text-ink">Library</h2>
+          <div className="flex gap-1 rounded-lg bg-chip p-1">
+            <button type="button" aria-pressed={view === "grid"} onClick={() => setView("grid")} className={view === "grid" ? "h-11 rounded-md bg-surface px-3 text-sm font-medium text-ink" : "h-11 rounded-md px-3 text-sm font-medium text-muted"}>Grid</button>
+            <button type="button" aria-pressed={view === "list"} onClick={() => setView("list")} className={view === "list" ? "h-11 rounded-md bg-surface px-3 text-sm font-medium text-ink" : "h-11 rounded-md px-3 text-sm font-medium text-muted"}>List</button>
+          </div>
+        </div>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
           <label className="relative block min-w-0 flex-1">
             <span className="sr-only">Search reels by keyword</span>
@@ -540,6 +635,31 @@ export function ShelfApp() {
               </button>
             ))}
           </div>
+        </div>
+        <div className="flex flex-wrap gap-1">
+          {(["all", "ready", "saved", "failed", "already"] as const).map((status) => (
+            <button
+              key={status}
+              type="button"
+              aria-pressed={statusFilter === status}
+              onClick={() => setStatusFilter(status)}
+              className={statusFilter === status ? "h-9 rounded-md bg-chip px-3 text-sm font-medium text-ink" : "h-9 rounded-md px-3 text-sm text-muted"}
+            >
+              {status === "all" ? "Any status" : statusLabel(status)}
+            </button>
+          ))}
+          <label className="sr-only" htmlFor="collection-filter">Collection</label>
+          <select
+            id="collection-filter"
+            value={collectionFilter}
+            onChange={(event) => setCollectionFilter(event.target.value)}
+            className="h-9 rounded-md border border-line bg-surface px-2 text-sm text-ink"
+          >
+            <option value="all">All collections</option>
+            {[...new Set(items.map((item) => item.collection).filter((name): name is string => Boolean(name)))].map((name) => (
+              <option key={name} value={name}>{name}</option>
+            ))}
+          </select>
         </div>
 
         {shown.length > 0 ? (
@@ -589,6 +709,10 @@ export function ShelfApp() {
               <input value={draftTags} onChange={(event) => setDraftTags(event.target.value)} placeholder="travel, music" className={fieldClass} />
             </label>
             <label className="block">
+              <span className="mb-1 block text-sm font-medium text-ink">Author</span>
+              <input value={draftAuthor} onChange={(event) => setDraftAuthor(event.target.value)} className={fieldClass} />
+            </label>
+            <label className="block">
               <span className="mb-1 block text-sm font-medium text-ink">Description</span>
               <input value={draftDescription} onChange={(event) => setDraftDescription(event.target.value)} className={fieldClass} />
             </label>
@@ -622,22 +746,41 @@ export function ShelfApp() {
         ) : filtered.length === 0 ? (
           <p className="panel px-5 py-12 text-sm text-pretty text-muted">No results for that search.</p>
         ) : (
-          <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+          <ul className={view === "grid" ? "grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4" : "grid gap-2"}>
             {filtered.map((item) => (
               <li key={item.shortcode} className="panel overflow-hidden">
-                <Cover key={`${item.shortcode}-${settings.showThumbnails}`} item={item} show={settings.showThumbnails} />
-                <div className="flex items-center gap-1 pr-1 pl-3">
+                {view === "grid" ? (
+                  <Cover key={`${item.shortcode}-${settings.showThumbnails}`} item={item} show={settings.showThumbnails} />
+                ) : null}
+                <div className="flex items-start gap-1 pr-1 pl-3">
                   <input
                     type="checkbox"
                     checked={item.selected}
                     onChange={() => toggle(item.shortcode)}
                     aria-label={`Include ${kindLabel(item.kind)} ${itemTitle(item)}`}
-                    className="size-4 shrink-0 accent-ink"
+                    className="mt-3 size-4 shrink-0 accent-ink"
                   />
                   <div className="min-w-0 flex-1 py-2">
-                    <p className="text-xs font-medium tracking-widest text-muted uppercase">{kindLabel(item.kind)}</p>
+                    <p className="text-xs font-medium tracking-widest text-muted uppercase">
+                      {kindLabel(item.kind)} · {statusLabel(item.status ?? "ready")}
+                    </p>
                     <p className="truncate text-sm text-ink">{item.title || itemTitle(item)}</p>
-                    {item.title ? <p className="truncate font-mono text-xs text-muted">{item.shortcode}</p> : null}
+                    {item.author ? <p className="truncate text-xs text-muted">{item.author}</p> : null}
+                    {item.collection ? <p className="truncate text-xs text-muted">{item.collection}</p> : null}
+                    {item.note ? <p className="text-xs text-pretty text-muted">{item.note}</p> : null}
+                    <div className="mt-1 flex flex-wrap gap-1">
+                      {(["saved", "already", "failed"] as const).map((status) => (
+                        <button
+                          key={status}
+                          type="button"
+                          aria-pressed={(item.status ?? "ready") === status}
+                          onClick={() => markStatus(item.shortcode, status)}
+                          className="h-8 rounded-md px-2 text-xs font-medium text-muted hover:text-ink"
+                        >
+                          {statusLabel(status)}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                   <button
                     type="button"
@@ -657,15 +800,25 @@ export function ShelfApp() {
       <section className="grid gap-4 lg:grid-cols-2">
         <div className="panel well flex min-h-0 flex-col p-4">
           <div className="mb-3">
-            <h2 className="font-display text-xl font-medium">Download file</h2>
+            <h2 className="font-display text-xl font-medium">Optional Terminal file</h2>
             <p className="text-sm text-pretty text-well-muted">
-              {result.ok ? cookieLine : "Add a link to prepare the file."}
+              This page is the product. It cannot write videos into a folder by itself. Safari cannot give a website a folder, and Shelf does not ask Firefox for one either. The file below is optional. It runs only if you paste it into Terminal.
             </p>
+            <ol className="mt-3 list-decimal space-y-1 pl-5 text-sm text-pretty text-well-muted">
+              <li>Checks that yt-dlp is in Downloads.</li>
+              <li>Creates Downloads/Instagram-Reels, private to your user.</li>
+              <li>Refuses any link that is not an Instagram post or Reel.</li>
+              <li>Saves the videos you chose. One failure does not stop the rest.</li>
+              <li>Writes shelf-index.json beside the videos, with the link, title, author, and date.</li>
+            </ol>
             {digest ? (
-              <p className="mt-1 font-mono text-xs text-well-muted" title={digest}>
-                SHA-256 {digest.slice(0, 16)}
+              <p className="mt-2 font-mono text-xs break-all text-well-muted" title={digest}>
+                SHA-256 {digest}
               </p>
             ) : null}
+            <p className="mt-2 text-sm text-pretty text-well-muted">
+              A signed, notarized Mac app would need an Apple Developer certificate. This project does not have one, so there is no .dmg. macOS would warn about an unsigned installer. Use this page, and Terminal only if you want the videos saved as files.
+            </p>
           </div>
           <pre className="script-scroll min-w-0 font-mono text-sm leading-relaxed">
             {result.ok ? result.script : items.length === 0 ? "The file appears here after you add a link." : result.error}
@@ -674,6 +827,9 @@ export function ShelfApp() {
             <button type="button" className={secondaryButton} onClick={() => void copyScript()} disabled={!result.ok}>
               <Copy className="size-4" aria-hidden="true" />
               {copied ? "Copied" : "Copy file"}
+            </button>
+            <button type="button" className={secondaryButton} onClick={() => void copySteps()} disabled={!result.ok}>
+              Copy Terminal steps
             </button>
           </div>
         </div>
@@ -829,6 +985,28 @@ export function ShelfApp() {
             </div>
           </details>
         </div>
+      </section>
+
+      <section id="policy" className="grid gap-3">
+        <h2 className="font-display text-2xl font-medium text-ink">Questions</h2>
+        <details className="panel px-4" open>
+          <summary className="flex min-h-11 cursor-pointer items-center text-sm font-medium">Privacy</summary>
+          <p className="pb-4 text-sm text-pretty text-muted">
+            Shelf has no account and no server. Your library stays in this browser. The optional Terminal file uses the Instagram login already open in Safari or Firefox, and that login stays there. Nothing is uploaded, and saved videos are not shared.
+          </p>
+        </details>
+        <details className="panel px-4">
+          <summary className="flex min-h-11 cursor-pointer items-center text-sm font-medium">Legality</summary>
+          <p className="pb-4 text-sm text-pretty text-muted">
+            Shelf is not affiliated with Instagram or Meta. Use it only for posts you have the right to save. Follow Instagram’s terms and the creator’s rights. Saving a post for yourself is not permission to repost it. Questions and takedown requests: <a className="underline" href="https://github.com/MiKhelangelo/shelf/issues">github.com/MiKhelangelo/shelf/issues</a>.
+          </p>
+        </details>
+        <details className="panel px-4">
+          <summary className="flex min-h-11 cursor-pointer items-center text-sm font-medium">Where files go</summary>
+          <p className="pb-4 text-sm text-pretty text-muted">
+            This page saves shelf-instagram.sh to your Downloads folder. If you run it, videos go to Downloads/Instagram-Reels, with shelf-index.json beside them. Requires macOS 12 or later. If a post fails, Terminal says it may be private, deleted, or changed. Mark that item Failed in the library.
+          </p>
+        </details>
       </section>
     </div>
   );
